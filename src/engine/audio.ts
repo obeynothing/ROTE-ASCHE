@@ -87,6 +87,24 @@ class SynthAudioEngine {
       case 'shoot':
         this.playTone(760, 210, 0.09, 'sawtooth', 0.07);
         break;
+      case 'shoot_shotgun':
+        this.playTone(260, 55, 0.16, 'sawtooth', 0.12);
+        this.playTone(540, 120, 0.09, 'square', 0.07);
+        break;
+      case 'shoot_harpoon':
+        this.playTone(980, 140, 0.16, 'sawtooth', 0.095);
+        this.playTone(1420, 480, 0.08, 'triangle', 0.06);
+        break;
+      case 'shoot_mortar':
+        this.playTone(210, 95, 0.15, 'triangle', 0.11);
+        break;
+      case 'explosion':
+        this.playTone(160, 32, 0.28, 'sawtooth', 0.14);
+        this.playTone(95, 28, 0.25, 'square', 0.09, 0.02);
+        break;
+      case 'weapon_switch':
+        this.playTone(420, 680, 0.07, 'square', 0.06);
+        break;
       case 'enemy_hit':
         this.playTone(300, 110, 0.08, 'square', 0.08);
         break;
@@ -107,11 +125,56 @@ class SynthAudioEngine {
       case 'switch_on':
         this.playTone(340, 510, 0.1, 'square', 0.07);
         break;
+      case 'switch_char':
+        this.playTone(380, 580, 0.09, 'triangle', 0.08);
+        break;
+      case 'summon':
+        this.playTone(280, 720, 0.16, 'sine', 0.1);
+        break;
+      case 'buddy_loss':
+        this.playTone(320, 90, 0.28, 'sawtooth', 0.14);
+        this.playTone(220, 70, 0.22, 'square', 0.09, 0.04);
+        break;
+      case 'buddy_rescue':
+        this.playTone(392, 587, 0.12, 'triangle', 0.11, 0);
+        this.playTone(587, 880, 0.18, 'triangle', 0.12, 0.08);
+        break;
+      case 'ram_kill':
+        this.playTone(160, 420, 0.12, 'sawtooth', 0.12);
+        this.playTone(240, 60, 0.18, 'square', 0.09, 0.03);
+        break;
+      case 'checkpoint':
+        this.playTone(440, 880, 0.16, 'triangle', 0.1);
+        this.playTone(880, 1180, 0.16, 'sine', 0.08, 0.08);
+        break;
+      case 'upgrade':
+        this.playTone(440, 660, 0.12, 'triangle', 0.11, 0);
+        this.playTone(660, 880, 0.14, 'triangle', 0.11, 0.08);
+        this.playTone(880, 1320, 0.2, 'triangle', 0.12, 0.16);
+        break;
       case 'turret_windup':
         this.playTone(240, 620, 0.35, 'sawtooth', 0.045);
         break;
       case 'turret_fire':
         this.playTone(580, 140, 0.22, 'sawtooth', 0.09);
+        break;
+      case 'enemy_telegraph':
+        this.playTone(320, 720, 0.18, 'square', 0.06);
+        break;
+      case 'boss_roar':
+        this.playTone(140, 38, 0.52, 'sawtooth', 0.16);
+        this.playTone(95, 32, 0.55, 'square', 0.12, 0.05);
+        break;
+      case 'boss_hit':
+        this.playTone(190, 75, 0.11, 'sawtooth', 0.1);
+        break;
+      case 'boss_slam':
+        this.playTone(130, 34, 0.34, 'sawtooth', 0.15);
+        break;
+      case 'boss_defeat':
+        this.playTone(220, 42, 0.45, 'sawtooth', 0.16, 0);
+        this.playTone(340, 60, 0.48, 'square', 0.14, 0.12);
+        this.playTone(523.25, 1046.5, 0.4, 'triangle', 0.13, 0.28);
         break;
       case 'hurt':
         this.playTone(180, 55, 0.24, 'sawtooth', 0.14);

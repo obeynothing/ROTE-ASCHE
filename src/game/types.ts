@@ -1,11 +1,17 @@
 export type GameScreenState = 'title' | 'playing' | 'paused' | 'stage_clear' | 'victory' | 'gameover';
 
 export type BackdropTheme =
-  | 'eclipse_citadel'
-  | 'ash_foundry'
-  | 'obelisk_wasteland'
-  | 'cathedral_void'
-  | 'red_core';
+  | 'containment_lab'
+  | 'flesh_foundry'
+  | 'bioreactor_abyss'
+  | 'quarantine_vault'
+  | 'toxic_sewer'
+  | 'nerve_cathedral'
+  | 'omega_sanctum';
+
+export type CharacterId = 'asche' | 'kron';
+
+export type WeaponId = 'pulse' | 'shotgun' | 'harpoon' | 'mortar';
 
 export interface Vec2 {
   x: number;
@@ -30,9 +36,32 @@ export interface InputSnapshot {
   dashJustPressed: boolean;
   shootJustPressed: boolean;
   shootHeld: boolean;
+  switchJustPressed: boolean;
+  summonJustPressed: boolean;
+  weaponCycleJustPressed: boolean;
+  weaponSelect: WeaponId | null;
+}
+
+export interface MenuInputSnapshot {
+  up: boolean;
+  down: boolean;
+  left: boolean;
+  right: boolean;
+  confirm: boolean;
+  back: boolean;
+}
+
+export interface TrailSample {
+  x: number;
+  y: number;
+  facing: 1 | -1;
+  onGround: boolean;
+  vx: number;
+  vy: number;
 }
 
 export interface PlayerState {
+  id: CharacterId;
   x: number;
   y: number;
   vx: number;
@@ -42,6 +71,7 @@ export interface PlayerState {
   facing: 1 | -1;
   onGround: boolean;
   onWall: -1 | 0 | 1;
+  gliding: boolean;
   coyoteTimer: number;
   jumpBufferTimer: number;
   airJumpsLeft: number;
@@ -66,7 +96,7 @@ export interface PlayerState {
 export interface PlatformDef extends Rect {
   id: string;
   kind: 'solid' | 'oneway' | 'moving';
-  accent?: 'none' | 'crimson' | 'bone';
+  accent?: 'none' | 'crimson' | 'bone' | 'bio';
   moveAxis?: 'x' | 'y';
   moveRange?: number;
   moveSpeed?: number;
@@ -76,7 +106,7 @@ export interface PlatformDef extends Rect {
 export interface SwitchDef extends Rect {
   id: string;
   targetGateId: string;
-  mode: 'latch' | 'timed';
+  mode: 'latch' | 'timed' | 'hold';
   duration?: number;
 }
 
@@ -98,7 +128,26 @@ export interface CrystalDef {
   radius: number;
 }
 
-export type EnemyType = 'patrol_drone' | 'saw_slider' | 'pulse_turret';
+export interface BuddyPodDef {
+  id: string;
+  x: number;
+  y: number;
+}
+
+export interface CheckpointDef {
+  id: string;
+  x: number;
+  y: number;
+}
+
+export type EnemyType =
+  | 'patrol_drone'
+  | 'saw_slider'
+  | 'pulse_turret'
+  | 'stalker_crawler'
+  | 'mortar_spitter'
+  | 'shield_enforcer'
+  | 'hunter_wasp';
 
 export interface EnemyDef {
   id: string;
@@ -117,22 +166,99 @@ export interface EnemyDef {
 export interface EnemyRuntime extends EnemyDef {
   dir: 1 | -1;
   phaseTimer: number;
-  state: 'idle' | 'windup' | 'firing';
+  state: 'idle' | 'windup' | 'firing' | 'charging' | 'recover';
   hp: number;
   maxHp: number;
   hitFlashTimer: number;
   alive: boolean;
+  originY: number;
+  attackVx: number;
+  attackVy: number;
 }
 
 export interface ProjectileRuntime {
+  id: string;
+  weapon: WeaponId;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  gravity: number;
+  radius: number;
+  splashRadius: number;
+  damage: number;
+  pierce: number;
+  life: number;
+  active: boolean;
+  heavy: boolean;
+  hitEnemyIds: string[];
+  trail?: Vec2[];
+}
+
+export interface EnemyProjectileRuntime {
   id: string;
   x: number;
   y: number;
   vx: number;
   vy: number;
+  gravity: number;
   radius: number;
   life: number;
   active: boolean;
+  kind: 'bio_orb' | 'bolt';
+}
+
+export interface BossArenaDef {
+  triggerX: number;
+  arenaMinX: number;
+  arenaMaxX: number;
+  floorY: number;
+  gateId: string;
+  spawnX: number;
+  spawnY: number;
+}
+
+export interface BossTentacle {
+  angle: number;
+  length: number;
+  striking: boolean;
+  targetX: number;
+  targetY: number;
+}
+
+export interface BossState {
+  name: string;
+  active: boolean;
+  defeated: boolean;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  anchorX: number;
+  anchorY: number;
+  hp: number;
+  maxHp: number;
+  phase: 1 | 2 | 3;
+  state: 'dormant' | 'idle' | 'telegraph_slam' | 'slam' | 'telegraph_volley' | 'telegraph_surge' | 'surge' | 'dying';
+  stateTimer: number;
+  attackCycle: number;
+  targetX: number;
+  targetY: number;
+  hitFlashTimer: number;
+  tentacles: BossTentacle[];
+  arenaMinX: number;
+  arenaMaxX: number;
+  floorY: number;
+  triggerX: number;
+  gateId: string;
+}
+
+export interface BloodDecal {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  color: string;
 }
 
 export interface SwitchRuntime extends SwitchDef {
@@ -160,6 +286,8 @@ export interface LevelDef {
   width: number;
   height: number;
   spawn: Vec2;
+  checkpoints: CheckpointDef[];
+  buddyPods: BuddyPodDef[];
   goal: Rect;
   parTimeSeconds: number;
   platforms: PlatformDef[];
@@ -168,6 +296,7 @@ export interface LevelDef {
   bouncePads: BouncePadDef[];
   crystals: CrystalDef[];
   enemies: EnemyDef[];
+  bossArena?: BossArenaDef;
 }
 
 export interface Particle {
@@ -183,20 +312,48 @@ export interface Particle {
   gravity: number;
 }
 
+export interface ShockwaveRing {
+  active: boolean;
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  life: number;
+  maxLife: number;
+  color: string;
+}
+
 export type GameEventType =
   | 'jump'
   | 'double_jump'
   | 'land'
   | 'dash'
   | 'shoot'
+  | 'shoot_shotgun'
+  | 'shoot_harpoon'
+  | 'shoot_mortar'
+  | 'explosion'
+  | 'weapon_switch'
   | 'enemy_hit'
   | 'enemy_kill'
+  | 'ram_kill'
   | 'ricochet'
   | 'bounce'
   | 'crystal'
   | 'switch_on'
+  | 'switch_char'
+  | 'summon'
+  | 'buddy_loss'
+  | 'buddy_rescue'
+  | 'checkpoint'
+  | 'upgrade'
   | 'turret_windup'
   | 'turret_fire'
+  | 'enemy_telegraph'
+  | 'boss_roar'
+  | 'boss_hit'
+  | 'boss_slam'
+  | 'boss_defeat'
   | 'hurt'
   | 'stage_clear';
 
@@ -209,13 +366,26 @@ export interface GameEvent {
 
 export interface WorldSimulation {
   level: LevelDef;
-  player: PlayerState;
+  players: [PlayerState, PlayerState];
+  activeCharIndex: 0 | 1;
+  partnerPresent: boolean;
+  activeTrailHistory: TrailSample[];
+  lastSafePos: Vec2;
+  activeSpawn: Vec2;
+  activatedCheckpoints: Set<string>;
+  collectedBuddyPods: Set<string>;
+  activeWeapon: WeaponId;
+  weaponLevel: 1 | 2 | 3 | 4;
   movingPlatforms: MovingPlatformRuntime[];
   switches: SwitchRuntime[];
   gates: GateRuntime[];
   enemies: EnemyRuntime[];
   projectiles: ProjectileRuntime[];
+  enemyProjectiles: EnemyProjectileRuntime[];
+  boss: BossState | null;
+  bloodDecals: BloodDecal[];
   collectedCrystals: Set<string>;
+  shardsEarned: number;
   elapsedSeconds: number;
   deaths: number;
   hitstopTimer: number;

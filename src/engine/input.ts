@@ -1,4 +1,4 @@
-import type { InputSnapshot } from '../game/types';
+import type { InputSnapshot, MenuInputSnapshot, WeaponId } from '../game/types';
 
 export interface GamepadDeviceInfo {
   index: number;
@@ -8,6 +8,7 @@ export interface GamepadDeviceInfo {
 
 export interface PolledInputs {
   player: InputSnapshot;
+  menu: MenuInputSnapshot;
   pauseJustPressed: boolean;
   restartJustPressed: boolean;
   muteJustPressed: boolean;
@@ -18,16 +19,39 @@ interface ButtonMemory {
   jump: boolean;
   dash: boolean;
   shoot: boolean;
+  switchChar: boolean;
+  summon: boolean;
+  weaponCycle: boolean;
   pause: boolean;
+  menuUp: boolean;
+  menuDown: boolean;
+  menuLeft: boolean;
+  menuRight: boolean;
+  menuConfirm: boolean;
+  menuBack: boolean;
 }
 
-const DEADZONE = 0.2;
+const DEADZONE = 0.25;
 
 export class InputHub {
   private keys = new Set<string>();
   private prevKeys = new Set<string>();
   private latchedKeys = new Set<string>();
-  private padMemory: ButtonMemory = { jump: false, dash: false, shoot: false, pause: false };
+  private padMemory: ButtonMemory = {
+    jump: false,
+    dash: false,
+    shoot: false,
+    switchChar: false,
+    summon: false,
+    weaponCycle: false,
+    pause: false,
+    menuUp: false,
+    menuDown: false,
+    menuLeft: false,
+    menuRight: false,
+    menuConfirm: false,
+    menuBack: false,
+  };
   private onGamepadChangeCb?: (pads: GamepadDeviceInfo[]) => void;
 
   constructor(onGamepadChange?: (pads: GamepadDeviceInfo[]) => void) {
@@ -81,7 +105,8 @@ export class InputHub {
       e.code === 'ArrowUp' ||
       e.code === 'ArrowDown' ||
       e.code === 'ArrowLeft' ||
-      e.code === 'ArrowRight'
+      e.code === 'ArrowRight' ||
+      e.code === 'Tab'
     ) {
       e.preventDefault();
     }
@@ -137,7 +162,16 @@ export class InputHub {
       mem.jump = false;
       mem.dash = false;
       mem.shoot = false;
+      mem.switchChar = false;
+      mem.summon = false;
+      mem.weaponCycle = false;
       mem.pause = false;
+      mem.menuUp = false;
+      mem.menuDown = false;
+      mem.menuLeft = false;
+      mem.menuRight = false;
+      mem.menuConfirm = false;
+      mem.menuBack = false;
       return {
         left: false,
         right: false,
@@ -149,7 +183,11 @@ export class InputHub {
         dashJustPressed: false,
         shootHeld: false,
         shootJustPressed: false,
+        switchJustPressed: false,
+        summonJustPressed: false,
+        weaponCycleJustPressed: false,
         pauseJustPressed: false,
+        menu: { up: false, down: false, left: false, right: false, confirm: false, back: false },
       };
     }
 
@@ -162,35 +200,57 @@ export class InputHub {
     const up = axY < -DEADZONE || btn(12);
     const down = axY > DEADZONE || btn(13);
 
-    const jumpHeld = btn(0) || btn(1);
-    const shootHeld = btn(2) || btn(4);
-    const dashHeld = btn(3) || btn(5) || btn(7);
-    const pauseHeld = btn(9);
+    const jumpHeld = btn(0); // A
+    const dashHeld = btn(1) || btn(5) || btn(7); // B / RB / RT
+    const shootHeld = btn(2); // X
+    const switchHeld = btn(3) || btn(4); // Y / LB
+    const weaponCycleHeld = btn(6); // LT
+    const summonHeld = btn(8); // Back
+    const pauseHeld = btn(9); // Start
 
-    const jumpJustPressed = jumpHeld && !mem.jump;
-    const jumpJustReleased = !jumpHeld && mem.jump;
-    const dashJustPressed = dashHeld && !mem.dash;
-    const shootJustPressed = shootHeld && !mem.shoot;
-    const pauseJustPressed = pauseHeld && !mem.pause;
+    const menuConfirmHeld = btn(0); // A
+    const menuBackHeld = btn(1); // B
 
-    mem.jump = jumpHeld;
-    mem.dash = dashHeld;
-    mem.shoot = shootHeld;
-    mem.pause = pauseHeld;
-
-    return {
+    const res = {
       left,
       right,
       up,
       down,
       jumpHeld,
-      jumpJustPressed,
-      jumpJustReleased,
-      dashJustPressed,
+      jumpJustPressed: jumpHeld && !mem.jump,
+      jumpJustReleased: !jumpHeld && mem.jump,
+      dashJustPressed: dashHeld && !mem.dash,
       shootHeld,
-      shootJustPressed,
-      pauseJustPressed,
+      shootJustPressed: shootHeld && !mem.shoot,
+      switchJustPressed: switchHeld && !mem.switchChar,
+      summonJustPressed: summonHeld && !mem.summon,
+      weaponCycleJustPressed: weaponCycleHeld && !mem.weaponCycle,
+      pauseJustPressed: pauseHeld && !mem.pause,
+      menu: {
+        up: up && !mem.menuUp,
+        down: down && !mem.menuDown,
+        left: left && !mem.menuLeft,
+        right: right && !mem.menuRight,
+        confirm: menuConfirmHeld && !mem.menuConfirm,
+        back: menuBackHeld && !mem.menuBack,
+      },
     };
+
+    mem.jump = jumpHeld;
+    mem.dash = dashHeld;
+    mem.shoot = shootHeld;
+    mem.switchChar = switchHeld;
+    mem.summon = summonHeld;
+    mem.weaponCycle = weaponCycleHeld;
+    mem.pause = pauseHeld;
+    mem.menuUp = up;
+    mem.menuDown = down;
+    mem.menuLeft = left;
+    mem.menuRight = right;
+    mem.menuConfirm = menuConfirmHeld;
+    mem.menuBack = menuBackHeld;
+
+    return res;
   }
 
   public poll(): PolledInputs {
@@ -209,7 +269,16 @@ export class InputHub {
     const gp = this.readGamepad(activePad);
     const jumpCodes = ['Space', 'KeyW', 'ArrowUp'];
     const dashCodes = ['ShiftLeft', 'ShiftRight', 'KeyK', 'KeyL'];
-    const shootCodes = ['KeyF', 'KeyJ', 'KeyC'];
+    const shootCodes = ['KeyF', 'KeyJ'];
+    const switchCodes = ['Tab', 'KeyQ'];
+    const summonCodes = ['KeyE'];
+    const weaponCycleCodes = ['KeyC', 'KeyV'];
+
+    let weaponSelect: WeaponId | null = null;
+    if (this.isJustPressed(['Digit1', 'Numpad1'])) weaponSelect = 'pulse';
+    else if (this.isJustPressed(['Digit2', 'Numpad2'])) weaponSelect = 'shotgun';
+    else if (this.isJustPressed(['Digit3', 'Numpad3'])) weaponSelect = 'harpoon';
+    else if (this.isJustPressed(['Digit4', 'Numpad4'])) weaponSelect = 'mortar';
 
     const player: InputSnapshot = {
       left: this.isDown(['KeyA', 'ArrowLeft']) || gp.left,
@@ -222,6 +291,19 @@ export class InputHub {
       dashJustPressed: this.isJustPressed(dashCodes) || gp.dashJustPressed,
       shootJustPressed: this.isJustPressed(shootCodes) || gp.shootJustPressed,
       shootHeld: this.isDown(shootCodes) || gp.shootHeld,
+      switchJustPressed: this.isJustPressed(switchCodes) || gp.switchJustPressed,
+      summonJustPressed: this.isJustPressed(summonCodes) || gp.summonJustPressed,
+      weaponCycleJustPressed: this.isJustPressed(weaponCycleCodes) || gp.weaponCycleJustPressed,
+      weaponSelect,
+    };
+
+    const menu: MenuInputSnapshot = {
+      up: this.isJustPressed(['ArrowUp', 'KeyW']) || gp.menu.up,
+      down: this.isJustPressed(['ArrowDown', 'KeyS']) || gp.menu.down,
+      left: this.isJustPressed(['ArrowLeft', 'KeyA']) || gp.menu.left,
+      right: this.isJustPressed(['ArrowRight', 'KeyD']) || gp.menu.right,
+      confirm: this.isJustPressed(['Enter', 'Space']) || gp.menu.confirm,
+      back: this.isJustPressed(['Escape', 'Backspace']) || gp.menu.back,
     };
 
     const pauseJustPressed = gp.pauseJustPressed;
@@ -233,6 +315,7 @@ export class InputHub {
 
     return {
       player,
+      menu,
       pauseJustPressed,
       restartJustPressed,
       muteJustPressed,

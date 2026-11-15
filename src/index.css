@@ -35,6 +35,10 @@
   image-rendering: crisp-edges;
 }
 
+.crimson-edge-glow {
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.45), 0 10px 28px rgba(0, 0, 0, 0.72);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
