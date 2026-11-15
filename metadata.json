@@ -1,0 +1,6 @@
+{
+  "name": "ROTE ASCHE — Dystopischer Pixel-Platformer",
+  "description": "Düsterer, dystopischer 2D-Pixel-Platformer in Rot, Schwarz und Weiß mit nativer Gamepad-Unterstützung und lokaler Bestenliste.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
