@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ROTE ASCHE — Dystopischer Pixel-Platformer</title>
+    <meta name="description" content="Düsterer, dystopischer 2D-Pixel-Platformer in Rot, Schwarz und Weiß mit nativer Gamepad-Unterstützung und Bestenliste." />
+    <meta property="og:title" content="ROTE ASCHE — Dystopischer Pixel-Platformer" />
+    <meta property="og:description" content="Düsterer, dystopischer 2D-Pixel-Platformer in Rot, Schwarz und Weiß mit nativer Gamepad-Unterstützung und Bestenliste." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@600;700&family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script type="module" crossorigin src="./assets/index-DkyN9gcH.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CqRdbjvx.css">
+  </head>
+  <body style="background-color:#050506;color:#F4F4F5;" class="bg-[#050506] text-[#F4F4F5] antialiased overflow-hidden select-none">
+    <div id="root"></div>
+    <script>
+      setTimeout(function () {
+        var r = document.getElementById('root');
+        if (r && r.childElementCount === 0) {
+          var inDocs = location.pathname.indexOf('/docs') !== -1;
+          var btn = inDocs
+            ? ''
+            : '<a href="./docs/" style="display:inline-block;padding:10px 18px;border-radius:10px;background:#dc2626;color:#fff;font-weight:700;text-decoration:none;font-size:14px;">Direkt zur gebauten Version (./docs/)</a>';
+          r.innerHTML =
+            '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:sans-serif;background:#050506;color:#f4f4f5;">' +
+            '<div style="max-width:520px;background:#09090b;border:1px solid #991b1b;border-radius:16px;padding:24px;">' +
+            '<h1 style="margin:0 0 8px;color:#ef4444;font-size:22px;letter-spacing:1px;">ROTE ASCHE · GitHub-Pages-Hinweis</h1>' +
+            '<p style="margin:0 0 14px;color:#d4d4d8;font-size:14px;line-height:1.5;">Diese Seite zeigt die unkompilierte Quell-HTML. Bitte wähle in GitHub unter <strong>Settings → Pages</strong> entweder <strong>Source: GitHub Actions</strong> oder Branch <strong>main</strong> mit Ordner <strong>/docs</strong>.</p>' +
+            btn +
+            '</div></div>';
+        }
+      }, 3000);
+    </script>
+  </body>
+</html>
+
