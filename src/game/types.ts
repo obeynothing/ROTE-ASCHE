@@ -239,11 +239,24 @@ export interface BossState {
   hp: number;
   maxHp: number;
   phase: 1 | 2 | 3;
-  state: 'dormant' | 'idle' | 'telegraph_slam' | 'slam' | 'telegraph_volley' | 'telegraph_surge' | 'surge' | 'dying';
+  state:
+    | 'dormant'
+    | 'idle'
+    | 'telegraph_slam'
+    | 'slam'
+    | 'telegraph_beam'
+    | 'beam'
+    | 'telegraph_volley'
+    | 'telegraph_surge'
+    | 'surge'
+    | 'dying';
   stateTimer: number;
   attackCycle: number;
   targetX: number;
   targetY: number;
+  beamX: number;
+  beamSweepDir: 1 | -1;
+  slamTargets: number[];
   hitFlashTimer: number;
   tentacles: BossTentacle[];
   arenaMinX: number;

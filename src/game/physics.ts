@@ -217,17 +217,17 @@ function getEnemyMaxHp(type: EnemyRuntime['type']): number {
 function createInitialBoss(level: LevelDef): BossState | null {
   const arena = level.bossArena;
   if (!arena) return null;
-  const w = 116;
-  const h = 120;
+  const w = 130;
+  const h = 128;
   const tentacles = Array.from({ length: 6 }, (_, i) => ({
     angle: (i / 6) * Math.PI * 2,
-    length: 70 + (i % 2) * 24,
+    length: 76 + (i % 2) * 26,
     striking: false,
     targetX: arena.spawnX,
     targetY: arena.spawnY,
   }));
   return {
-    name: 'OMEGA-KOLOS · DER FLEISCHKERN',
+    name: 'KARNIFEX-09 · BLUT-SERAPH',
     active: false,
     defeated: false,
     x: arena.spawnX,
@@ -236,14 +236,17 @@ function createInitialBoss(level: LevelDef): BossState | null {
     h,
     anchorX: arena.spawnX,
     anchorY: arena.spawnY,
-    hp: 90,
-    maxHp: 90,
+    hp: 105,
+    maxHp: 105,
     phase: 1,
     state: 'dormant',
     stateTimer: 0,
     attackCycle: 0,
     targetX: arena.spawnX - 240,
     targetY: arena.floorY,
+    beamX: arena.spawnX + w / 2,
+    beamSweepDir: -1,
+    slamTargets: [arena.spawnX - 180, arena.spawnX - 40],
     hitFlashTimer: 0,
     tentacles,
     arenaMinX: arena.arenaMinX,
@@ -1374,7 +1377,7 @@ function stepBoss(sim: WorldSimulation, dt: number): void {
   // Dying dissolution sequence
   if (boss.state === 'dying') {
     boss.stateTimer -= dt;
-    if (Math.random() < 0.45) {
+    if (Math.random() < 0.5) {
       sim.events.push({
         type: 'explosion',
         x: boss.x + Math.random() * boss.w,
@@ -1394,7 +1397,7 @@ function stepBoss(sim: WorldSimulation, dt: number): void {
     if (activePlayer.alive && activePlayer.x >= boss.triggerX) {
       boss.active = true;
       boss.state = 'idle';
-      boss.stateTimer = 0.9;
+      boss.stateTimer = 0.85;
       sim.trauma = Math.min(1, sim.trauma + 0.65);
       sim.events.push({
         type: 'boss_roar',
@@ -1406,71 +1409,143 @@ function stepBoss(sim: WorldSimulation, dt: number): void {
     return;
   }
 
-  // Animate organic tentacles
+  const bossCx = boss.x + boss.w / 2;
+  const bossCy = boss.y + boss.h / 2;
+
+  // Animate articulated biomechanical scythe-claws
   for (let i = 0; i < boss.tentacles.length; i++) {
     const ten = boss.tentacles[i];
-    ten.angle += dt * (1.8 + boss.phase * 0.6) * (i % 2 === 0 ? 1 : -1);
-    ten.striking = boss.state === 'slam' || boss.state === 'telegraph_slam';
+    ten.angle += dt * (2.0 + boss.phase * 0.65) * (i % 2 === 0 ? 1 : -1);
+    ten.striking = boss.state === 'slam' || boss.state === 'telegraph_slam' || boss.state === 'beam';
     if (boss.state === 'telegraph_slam' || boss.state === 'slam') {
-      ten.targetX = boss.targetX + (i - 2.5) * 26;
+      const targetSlot = boss.slamTargets[i % Math.max(1, boss.slamTargets.length)] ?? boss.targetX;
+      ten.targetX = targetSlot + ((i % 2 === 0 ? -1 : 1) * 14);
       ten.targetY = boss.floorY;
+    } else if (boss.state === 'telegraph_beam' || boss.state === 'beam') {
+      const side = i % 2 === 0 ? -1 : 1;
+      ten.targetX = bossCx + side * 88;
+      ten.targetY = bossCy + 28 + Math.sin(sim.elapsedSeconds * 8 + i) * 14;
     } else {
-      ten.targetX = boss.x + boss.w / 2 + Math.cos(ten.angle) * ten.length;
-      ten.targetY = boss.y + boss.h / 2 + Math.sin(ten.angle) * (ten.length * 0.72);
+      ten.targetX = bossCx + Math.cos(ten.angle) * ten.length;
+      ten.targetY = bossCy + Math.sin(ten.angle) * (ten.length * 0.72);
     }
   }
 
   boss.stateTimer -= dt;
-  const phaseSpeed = boss.phase === 3 ? 1.45 : boss.phase === 2 ? 1.2 : 1.0;
+  const phaseSpeed = boss.phase === 3 ? 1.48 : boss.phase === 2 ? 1.22 : 1.0;
 
   if (boss.state === 'idle') {
-    // Menacing hover/stalk drift around upper-mid arena
     const desiredX = Math.max(
-      boss.arenaMinX + 160,
-      Math.min(boss.arenaMaxX - boss.w - 40, boss.anchorX + Math.sin(sim.elapsedSeconds * 1.4) * 140),
+      boss.arenaMinX + 150,
+      Math.min(boss.arenaMaxX - boss.w - 40, boss.anchorX + Math.sin(sim.elapsedSeconds * 1.45) * 145),
     );
-    const desiredY = boss.anchorY + Math.sin(sim.elapsedSeconds * 2.4) * 26;
-    boss.x += (desiredX - boss.x) * Math.min(1, dt * 2.4 * phaseSpeed);
-    boss.y += (desiredY - boss.y) * Math.min(1, dt * 3.0);
+    const desiredY = boss.anchorY + Math.sin(sim.elapsedSeconds * 2.5) * 24;
+    boss.x += (desiredX - boss.x) * Math.min(1, dt * 2.6 * phaseSpeed);
+    boss.y += (desiredY - boss.y) * Math.min(1, dt * 3.1);
 
     if (boss.stateTimer <= 0) {
-      boss.attackCycle = (boss.attackCycle + 1) % 3;
+      boss.attackCycle = (boss.attackCycle + 1) % 4;
       if (boss.attackCycle === 0) {
+        // 1. Multi-Claw Twin / Triple Floor Slam
         boss.state = 'telegraph_slam';
-        boss.stateTimer = 0.68 / phaseSpeed;
-        boss.targetX = Math.max(boss.arenaMinX + 70, Math.min(boss.arenaMaxX - 70, playerCx));
+        boss.stateTimer = 0.66 / phaseSpeed;
+        const primaryX = Math.max(boss.arenaMinX + 75, Math.min(boss.arenaMaxX - 75, playerCx));
+        const secondaryX = Math.max(
+          boss.arenaMinX + 75,
+          Math.min(boss.arenaMaxX - 75, primaryX + (primaryX > (boss.arenaMinX + boss.arenaMaxX) / 2 ? -175 : 175)),
+        );
+        boss.targetX = primaryX;
         boss.targetY = boss.floorY;
-        sim.events.push({ type: 'enemy_telegraph', x: boss.targetX, y: boss.floorY - 24, color: '#EF4444' });
+        boss.slamTargets =
+          boss.phase === 3
+            ? [primaryX, secondaryX, Math.round((boss.arenaMinX + boss.arenaMaxX) / 2)]
+            : [primaryX, secondaryX];
+        for (const sx of boss.slamTargets) {
+          sim.events.push({ type: 'enemy_telegraph', x: sx, y: boss.floorY - 24, color: '#EF4444' });
+        }
       } else if (boss.attackCycle === 1) {
+        // 2. Crimson Annihilation Beam Sweep
+        boss.state = 'telegraph_beam';
+        boss.stateTimer = 0.72 / phaseSpeed;
+        boss.beamSweepDir = playerCx >= bossCx ? 1 : -1;
+        boss.beamX = Math.max(boss.arenaMinX + 55, Math.min(boss.arenaMaxX - 55, playerCx - boss.beamSweepDir * 130));
+        sim.events.push({ type: 'turret_windup', x: bossCx, y: bossCy + 20, color: '#FFFFFF' });
+      } else if (boss.attackCycle === 2) {
+        // 3. Plasma Bolt & Bio-Orb Fan Volley
         boss.state = 'telegraph_volley';
-        boss.stateTimer = 0.56 / phaseSpeed;
-        sim.events.push({ type: 'enemy_telegraph', x: boss.x + boss.w / 2, y: boss.y + boss.h / 2, color: '#FFFFFF' });
+        boss.stateTimer = 0.54 / phaseSpeed;
+        sim.events.push({ type: 'enemy_telegraph', x: bossCx, y: bossCy, color: '#FFFFFF' });
       } else {
+        // 4. Serrated Wing-Blade Arena Surge
         boss.state = 'telegraph_surge';
-        boss.stateTimer = 0.64 / phaseSpeed;
-        boss.targetX = playerCx < boss.x + boss.w / 2 ? boss.arenaMinX + 45 : boss.arenaMaxX - boss.w - 45;
+        boss.stateTimer = 0.62 / phaseSpeed;
+        boss.targetX = playerCx < bossCx ? boss.arenaMinX + 38 : boss.arenaMaxX - boss.w - 38;
         boss.targetY = boss.floorY - boss.h - 4;
-        sim.events.push({ type: 'boss_roar', x: boss.x + boss.w / 2, y: boss.y + boss.h / 2, color: '#EF4444' });
+        sim.events.push({ type: 'boss_roar', x: bossCx, y: bossCy, color: '#EF4444' });
       }
     }
   } else if (boss.state === 'telegraph_slam') {
     if (boss.stateTimer <= 0) {
       boss.state = 'slam';
-      boss.stateTimer = 0.38;
+      boss.stateTimer = 0.4;
       sim.trauma = Math.min(1, sim.trauma + 0.55);
-      addBloodDecalNear(sim, boss.targetX, boss.floorY, 2);
-      sim.events.push({ type: 'boss_slam', x: boss.targetX, y: boss.floorY, color: '#EF4444' });
+      for (const sx of boss.slamTargets) {
+        addBloodDecalNear(sim, sx, boss.floorY, 2);
+        sim.events.push({ type: 'boss_slam', x: sx, y: boss.floorY, color: '#EF4444' });
+      }
     }
   } else if (boss.state === 'slam') {
-    // Active tendril slam damage zone on the floor
-    const slamZone: Rect = {
-      x: boss.targetX - 64,
-      y: boss.floorY - 128,
-      w: 128,
-      h: 132,
-    };
-    if (activePlayer.alive && activePlayer.dashTimer <= 0 && rectsOverlap(activePlayer, slamZone)) {
-      damageActivePlayer(sim, false);
+    for (const sx of boss.slamTargets) {
+      const slamZone: Rect = {
+        x: sx - 48,
+        y: boss.floorY - 132,
+        w: 96,
+        h: 136,
+      };
+      if (activePlayer.alive && activePlayer.dashTimer <= 0 && rectsOverlap(activePlayer, slamZone)) {
+        damageActivePlayer(sim, false);
+        break;
+      }
+    }
+    if (boss.stateTimer <= 0) {
+      boss.state = 'idle';
+      boss.stateTimer = 0.9 / phaseSpeed;
+    }
+  } else if (boss.state === 'telegraph_beam') {
+    // Track boss gently above center during beam lock-on
+    const midArenaX = (boss.arenaMinX + boss.arenaMaxX) / 2 - boss.w / 2;
+    boss.x += (midArenaX - boss.x) * Math.min(1, dt * 3.5);
+    boss.y += (boss.anchorY - 22 - boss.y) * Math.min(1, dt * 4);
+    if (boss.stateTimer <= 0) {
+      boss.state = 'beam';
+      boss.stateTimer = 0.92;
+      sim.events.push({ type: 'turret_fire', x: bossCx, y: bossCy + 20, color: '#EF4444' });
+    }
+  } else if (boss.state === 'beam') {
+    boss.beamX += boss.beamSweepDir * (285 * phaseSpeed) * dt;
+    if (boss.beamX <= boss.arenaMinX + 40) {
+      boss.beamX = boss.arenaMinX + 40;
+      boss.beamSweepDir = 1;
+    } else if (boss.beamX >= boss.arenaMaxX - 40) {
+      boss.beamX = boss.arenaMaxX - 40;
+      boss.beamSweepDir = -1;
+    }
+    // Check player hit along angled beam from boss core down to floor (sampling 6 segments)
+    const originX = bossCx;
+    const originY = bossCy + 16;
+    const endX = boss.beamX;
+    const endY = boss.floorY;
+    if (activePlayer.alive && activePlayer.dashTimer <= 0) {
+      for (let s = 1; s <= 6; s++) {
+        const u = s / 6;
+        const px = originX + (endX - originX) * u;
+        const py = originY + (endY - originY) * u;
+        const segRect: Rect = { x: px - 14, y: py - 14, w: 28, h: 28 };
+        if (rectsOverlap(activePlayer, segRect)) {
+          damageActivePlayer(sim, false);
+          break;
+        }
+      }
     }
     if (boss.stateTimer <= 0) {
       boss.state = 'idle';
@@ -1478,39 +1553,37 @@ function stepBoss(sim: WorldSimulation, dt: number): void {
     }
   } else if (boss.state === 'telegraph_volley') {
     if (boss.stateTimer <= 0) {
-      const orbCount = boss.phase === 3 ? 7 : boss.phase === 2 ? 5 : 4;
-      const cx = boss.x + boss.w / 2;
-      const cy = boss.y + boss.h * 0.65;
-      for (let i = 0; i < orbCount; i++) {
-        const spread = i / (orbCount - 1) - 0.5;
-        const dirToPlayer = playerCx >= cx ? 1 : -1;
+      const boltCount = boss.phase === 3 ? 7 : boss.phase === 2 ? 5 : 4;
+      const aimBase = Math.atan2(playerCy - bossCy, playerCx - bossCx);
+      for (let i = 0; i < boltCount; i++) {
+        const spread = (i / (boltCount - 1) - 0.5) * 0.95;
+        const ang = aimBase + spread;
         sim.enemyProjectiles.push({
           id: `ep-boss-${++projectileSeq}`,
-          x: cx,
-          y: cy,
-          vx: dirToPlayer * (230 + Math.abs(spread) * 180) + spread * 310,
-          vy: -360 - (1 - Math.abs(spread)) * 180,
-          gravity: 780,
-          radius: 9,
-          life: 3.0,
+          x: bossCx,
+          y: bossCy + 10,
+          vx: Math.cos(ang) * (350 + boss.phase * 35),
+          vy: Math.sin(ang) * (350 + boss.phase * 35),
+          gravity: i % 2 === 0 ? 180 : 0,
+          radius: i % 2 === 0 ? 8 : 6,
+          life: 2.8,
           active: true,
-          kind: 'bio_orb',
+          kind: i % 2 === 0 ? 'bio_orb' : 'bolt',
         });
       }
-      // In Phase 2/3, optionally hatch a bio-crawler minion if fewer than 2 enemies alive in arena
       if (boss.phase >= 2) {
         const activeMinions = sim.enemies.filter((e) => e.alive && e.x >= boss.arenaMinX).length;
         if (activeMinions < 2) {
           sim.enemies.push({
             id: `boss-minion-${++projectileSeq}`,
             type: boss.phase === 3 ? 'hunter_wasp' : 'stalker_crawler',
-            x: boss.x + boss.w / 2 - 16,
+            x: bossCx - 16,
             y: boss.phase === 3 ? boss.y + 40 : boss.floorY - 28,
             w: 32,
             h: 26,
             patrolMinX: boss.arenaMinX + 30,
             patrolMaxX: boss.arenaMaxX - 50,
-            speed: 145,
+            speed: 150,
             dir: playerCx >= boss.x ? 1 : -1,
             phaseTimer: 0,
             state: 'idle',
@@ -1525,30 +1598,28 @@ function stepBoss(sim: WorldSimulation, dt: number): void {
         }
       }
       boss.state = 'idle';
-      boss.stateTimer = 1.0 / phaseSpeed;
+      boss.stateTimer = 0.95 / phaseSpeed;
     }
   } else if (boss.state === 'telegraph_surge') {
-    // Drop toward floor level before charging across
-    boss.y += (boss.targetY - boss.y) * Math.min(1, dt * 6);
+    boss.y += (boss.targetY - boss.y) * Math.min(1, dt * 6.2);
     if (boss.stateTimer <= 0) {
       boss.state = 'surge';
       boss.stateTimer = 0.85;
     }
   } else if (boss.state === 'surge') {
     const dir = boss.targetX >= boss.x ? 1 : -1;
-    boss.x += dir * (410 * phaseSpeed) * dt;
+    boss.x += dir * (435 * phaseSpeed) * dt;
     if (Math.abs(boss.x - boss.targetX) < 18 || boss.stateTimer <= 0) {
       boss.state = 'idle';
-      boss.stateTimer = 1.05 / phaseSpeed;
+      boss.stateTimer = 1.0 / phaseSpeed;
     }
   }
 
-  // Contact damage with Boss Core
-  const bossBody: Rect = { x: boss.x + 10, y: boss.y + 10, w: boss.w - 20, h: boss.h - 20 };
+  // Contact damage with Boss Armored Core
+  const bossBody: Rect = { x: boss.x + 12, y: boss.y + 12, w: boss.w - 24, h: boss.h - 24 };
   if (activePlayer.alive && activePlayer.dashTimer <= 0 && rectsOverlap(activePlayer, bossBody)) {
     damageActivePlayer(sim, false);
   }
-  void playerCy;
 }
 
 export function stepWorldSimulation(
@@ -1991,10 +2062,10 @@ export function stepWorldSimulation(
     }
   }
 
-  // 7b. Step Omega-Kolos Endboss (Sektor 14)
+  // 7b. Step KARNIFEX-09 Blut-Seraph Endboss (Sektor 14)
   stepBoss(sim, dt);
 
-  // 8. Goal Monolith (locked while Omega-Kolos Boss remains undefeated)
+  // 8. Goal Monolith (locked while Boss remains undefeated)
   const bossCleared = !sim.boss || sim.boss.defeated;
   const inGoal = bossCleared && nowActive.alive && rectsOverlap(nowActive, sim.level.goal);
   nowActive.inGoal = inGoal;

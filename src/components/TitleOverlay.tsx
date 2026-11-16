@@ -100,7 +100,7 @@ export function TitleOverlay({
 
           <p className="text-zinc-300 text-sm sm:text-base leading-relaxed max-w-lg mb-6">
             14 eskalierende Sektoren durch 7 verseuchte Biome, 4 wechselbare Waffen und 7 Gegnerklassen bis zum{' '}
-            <strong className="text-[#EF4444]">Omega-Kolos</strong>.{' '}
+            <strong className="text-[#EF4444]">Karnifex-09 · Blut-Seraph</strong>.{' '}
             <strong className="text-white">Asche</strong> springt dreifach; <strong className="text-[#EF4444]">Kron</strong> gleitet, zerschmettert Feinde im Ramm-Dash und führt dich als Tag-Team-Extra-Leben.
           </p>
 

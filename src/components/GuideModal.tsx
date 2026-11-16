@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ControlLabels } from '../game/controls';
 import { WEAPON_ORDER, WEAPONS } from '../game/physics';
-import { GAME_EDITION, GAME_VERSION } from '../game/version';
+import { GAME_EDITION, GAME_VERSION, VERSION_NOTES } from '../game/version';
 import type { MenuInputSubscriber } from '../hooks/useMenuNavigation';
 import { InputPrompt } from './InputPrompt';
 
@@ -81,14 +81,14 @@ const ENEMY_BESTIARY: EnemyBestiaryEntry[] = [
     counter: 'Früh beim Schweben mit Puls oder Schrot vom Himmel holen.',
   },
   {
-    id: 'omega_kolos',
-    name: 'OMEGA-KOLOS · Fleischkern',
-    hp: '90 HP · 3 Phasen',
+    id: 'karnifex_09',
+    name: 'KARNIFEX-09 · Blut-Seraph',
+    hp: '105 HP · 3 Phasen',
     threat: 'Endboss · Sektor 14',
     behavior:
-      'Schlägt Tentakel auf markierte Boden-Zonen, feuert Sporen-Salven, ruft Brut-Minions (ab Phase 2) und stürmt durch die Kammer.',
+      'Entfesselt Multi-Zonen-Knochenklingen, schwenkt einen vernichtenden Blut-Laserstrahl über den Boden, feuert Sporen-Salven (mit Brut-Minions ab Phase 2) und stürzt im Flügel-Ansturm durch die Kammer.',
     counter:
-      'Obere Katwalks nutzen, roten Boden-Markierungen ausweichen und mit Harpune oder Mörser den Kern brechen.',
+      'Obere Katwalks nutzen, dem Schwenk-Laser per Dash oder Sprung entkommen und mit Harpune oder Mörser den Kern brechen.',
   },
 ];
 
@@ -164,35 +164,25 @@ function EnemyPixelPortrait({ id }: { id: string }) {
     default:
       return (
         <svg viewBox="0 0 36 28" className="w-12 h-9 shrink-0" aria-hidden="true">
-          {/* Writhing multi-jointed tendrils + white bone barbs */}
-          <path d="M4 25 Q7 17 12 16" stroke="#450A0A" strokeWidth="4" fill="none" />
-          <path d="M4 25 Q7 17 12 16" stroke="#DC2626" strokeWidth="2" fill="none" />
-          <rect x="2" y="23" width="3" height="3" fill="#F4F4F5" />
-          <path d="M32 25 Q29 17 24 16" stroke="#450A0A" strokeWidth="4" fill="none" />
-          <path d="M32 25 Q29 17 24 16" stroke="#DC2626" strokeWidth="2" fill="none" />
-          <rect x="31" y="23" width="3" height="3" fill="#F4F4F5" />
-          <path d="M7 6 Q11 9 13 11" stroke="#991B1B" strokeWidth="2.5" fill="none" />
-          <path d="M29 6 Q25 9 23 11" stroke="#991B1B" strokeWidth="2.5" fill="none" />
-          {/* Asymmetric organic flesh core + shattered bone rib plates */}
-          <rect x="9" y="5" width="18" height="17" rx="4" fill="#450A0A" />
-          <rect x="10" y="6" width="16" height="15" rx="3" fill="#991B1B" />
-          <rect x="12" y="7" width="12" height="12" rx="2" fill="#DC2626" />
-          <rect x="8" y="8" width="3" height="10" fill="#E4E4E7" />
-          <rect x="25" y="8" width="3" height="10" fill="#E4E4E7" />
-          <rect x="13" y="3" width="10" height="3" fill="#F4F4F5" />
-          {/* Asymmetric Carrion Eye Cluster */}
-          <rect x="12" y="8" width="3" height="3" fill="#050506" />
-          <rect x="13" y="9" width="2" height="2" fill="#FFFFFF" />
-          <rect x="17" y="7" width="3" height="3" fill="#050506" />
-          <rect x="18" y="8" width="2" height="2" fill="#EF4444" />
-          <rect x="21" y="9" width="3" height="3" fill="#050506" />
-          <rect x="21" y="10" width="2" height="1" fill="#FFFFFF" />
-          {/* Jagged glowing inner maw */}
-          <rect x="13" y="13" width="10" height="6" fill="#050506" />
-          <rect x="15" y="15" width="6" height="2" fill="#EF4444" />
-          <rect x="14" y="13" width="2" height="2" fill="#FFFFFF" />
-          <rect x="20" y="13" width="2" height="2" fill="#FFFFFF" />
-          <rect x="17" y="17" width="2" height="2" fill="#FFFFFF" />
+          {/* Twin Seraph Wing-Blades */}
+          <path d="M11 12 L2 5 L4 11 Z" fill="#F4F4F5" />
+          <path d="M11 16 L3 15 L6 20 Z" fill="#DC2626" />
+          <path d="M25 12 L34 5 L32 11 Z" fill="#F4F4F5" />
+          <path d="M25 16 L33 15 L30 20 Z" fill="#DC2626" />
+          {/* Crowned Bone-Skull & Armored Thorax */}
+          <rect x="11" y="12" width="14" height="12" rx="2" fill="#18181F" stroke="#F4F4F5" strokeWidth="1" />
+          <rect x="14" y="15" width="8" height="6" fill="#991B1B" />
+          <rect x="16" y="16" width="4" height="4" fill="#FFFFFF" />
+          <rect x="12" y="4" width="12" height="8" rx="1" fill="#F4F4F5" />
+          <rect x="12" y="1" width="2" height="3" fill="#FFFFFF" />
+          <rect x="17" y="1" width="2" height="3" fill="#FFFFFF" />
+          <rect x="22" y="1" width="2" height="3" fill="#FFFFFF" />
+          {/* Triad Crimson Optics */}
+          <rect x="13" y="7" width="2" height="2" fill="#EF4444" />
+          <rect x="17" y="6" width="2" height="2" fill="#FFFFFF" />
+          <rect x="21" y="7" width="2" height="2" fill="#EF4444" />
+          {/* Sweeping Laser Ray Accent */}
+          <line x1="18" y1="22" x2="26" y2="27" stroke="#EF4444" strokeWidth="2" />
         </svg>
       );
   }
@@ -288,7 +278,7 @@ export function GuideModal({ open, controls, onClose, subscribeMenuInput }: Guid
           {tab === 'enemies' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {ENEMY_BESTIARY.map((enemy) => {
-                const isBoss = enemy.id === 'omega_kolos';
+                const isBoss = enemy.id === 'karnifex_09';
                 return (
                   <div
                     key={enemy.id}
@@ -391,6 +381,21 @@ export function GuideModal({ open, controls, onClose, subscribeMenuInput }: Guid
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Release Notes */}
+              <div className="p-3.5 rounded-xl bg-[#050506] border border-zinc-800">
+                <div className="text-[11px] font-mono-num uppercase tracking-widest text-[#EF4444] font-bold mb-1.5">
+                  Versionshinweis {GAME_VERSION} ({GAME_EDITION})
+                </div>
+                <ul className="space-y-1 text-xs text-zinc-300">
+                  {VERSION_NOTES.map((note) => (
+                    <li key={note} className="flex items-start gap-2">
+                      <span className="text-[#EF4444] mt-0.5">▪</span>
+                      <span>{note}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           )}

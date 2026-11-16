@@ -433,28 +433,157 @@ export default function App() {
       if (screenRef.current === 'title' && !leaderboardOpenRef.current && !guideOpenRef.current) {
         frozenRendered = false;
         accumulator = 0;
+        const prevT = sim.elapsedSeconds;
         sim.elapsedSeconds += dt;
-
-        // Atmospheric dual-character diorama on right deck (ASCHE & KRON with long scarves)
         const t = sim.elapsedSeconds;
+
+        // Dynamic 8-second dual-squad diorama choreography on Sector 1's right deck (s1-floor-2 y=540 & catwalk y=440)
+        const cycle = 8.0;
+        const phase = t % cycle;
+        const prevPhase = prevT % cycle;
         const p1 = sim.players[0];
-        p1.x = 815 + Math.sin(t * 0.55) * 44;
-        p1.y = 560 - p1.h;
-        p1.facing = Math.cos(t * 0.55) >= 0 ? 1 : -1;
-        p1.vx = Math.cos(t * 0.55) * 120;
-        p1.onGround = true;
-        p1.walkPhase += dt * 3.8;
+        const p2 = sim.players[1];
+
+        p1.recoilTimer = Math.max(0, p1.recoilTimer - dt);
+        p2.recoilTimer = Math.max(0, p2.recoilTimer - dt);
+        p1.dashTimer = 0;
+        p2.dashTimer = 0;
+        p2.gliding = false;
+
+        // ASCHE choreography: Sprint -> Jump onto catwalk -> Fire burst -> Air-Dash across -> Crouch & Drop
+        if (phase < 1.6) {
+          const u = phase / 1.6;
+          p1.x = 700 + u * 230;
+          p1.y = 540 - p1.h;
+          p1.facing = 1;
+          p1.vx = 180;
+          p1.vy = 0;
+          p1.onGround = true;
+          p1.walkPhase += dt * 11;
+        } else if (phase < 2.8) {
+          const u = (phase - 1.6) / 1.2;
+          p1.x = 930 - u * 115;
+          // Parabolic jump arc up onto s1-ledge-sw1 (y=440)
+          p1.y = 540 - p1.h - Math.sin(u * Math.PI * 0.72) * 142;
+          if (u > 0.75) p1.y = Math.min(p1.y, 440 - p1.h);
+          p1.facing = -1;
+          p1.vx = -110;
+          p1.vy = -120;
+          p1.onGround = false;
+        } else if (phase < 4.4) {
+          const u = (phase - 2.8) / 1.6;
+          p1.x = 815 + Math.sin(u * Math.PI) * 55;
+          p1.y = 440 - p1.h;
+          p1.facing = 1;
+          p1.vx = Math.cos(u * Math.PI) * 90;
+          p1.vy = 0;
+          p1.onGround = true;
+          p1.walkPhase += dt * 7;
+          // Rhythmic 3-round weapon burst on catwalk
+          const burstStep = Math.floor(phase * 5);
+          if (burstStep !== Math.floor(prevPhase * 5) && burstStep % 2 === 0) {
+            p1.recoilTimer = 0.085;
+            renderer.spawnParticlesFromEvents([
+              { type: 'shoot', x: p1.x + p1.w + 8, y: p1.y + 15, color: '#EF4444' },
+            ]);
+          }
+        } else if (phase < 5.3) {
+          const u = (phase - 4.4) / 0.9;
+          p1.x = 815 + u * 275;
+          p1.y = 440 - p1.h + u * u * 100;
+          p1.facing = 1;
+          p1.vx = 380;
+          p1.vy = 110;
+          p1.onGround = false;
+          if (u < 0.48) {
+            p1.dashTimer = 0.08;
+            p1.dashVx = 420;
+            p1.dashVy = 0;
+          }
+        } else if (phase < 6.8) {
+          const u = (phase - 5.3) / 1.5;
+          p1.x = 1090 - u * 260;
+          p1.y = 540 - p1.h;
+          p1.facing = -1;
+          p1.vx = -195;
+          p1.vy = 0;
+          p1.onGround = true;
+          p1.walkPhase += dt * 12;
+        } else {
+          const u = (phase - 6.8) / 1.2;
+          p1.x = 830 - u * 130;
+          p1.y = 540 - p1.h - Math.sin(u * Math.PI) * 52;
+          p1.facing = u < 0.5 ? -1 : 1;
+          p1.vx = -95;
+          p1.vy = 0;
+          p1.onGround = u > 0.85;
+        }
         updateScarfTrail(p1, t, dt);
 
-        const p2 = sim.players[1];
-        p2.x = 745 + Math.sin(t * 0.55 - 0.6) * 32;
-        p2.y = 560 - p2.h;
-        p2.facing = 1;
-        p2.vx = Math.cos(t * 0.55 - 0.6) * 90;
-        p2.onGround = true;
-        p2.walkPhase += dt * 3.2;
-        updateScarfTrail(p2, t + 0.5, dt);
+        // KRON choreography: High Leap -> Mechanical Wing-Glider Descent -> Heavy Shots -> Armored Ram-Dash
+        if (phase < 1.3) {
+          const u = phase / 1.3;
+          p2.x = 770 + u * 65;
+          p2.y = 440 - p2.h - Math.sin(u * Math.PI * 0.5) * 165;
+          p2.facing = 1;
+          p2.vx = 60;
+          p2.vy = -160;
+          p2.onGround = false;
+        } else if (phase < 3.4) {
+          const u = (phase - 1.3) / 2.1;
+          p2.x = 835 + u * 235;
+          p2.y = 275 - p2.h + u * (540 - 275);
+          p2.facing = 1;
+          p2.vx = 125;
+          p2.vy = 110;
+          p2.onGround = false;
+          p2.gliding = true;
+        } else if (phase < 5.0) {
+          const u = (phase - 3.4) / 1.6;
+          p2.x = 1070 - Math.sin(u * Math.PI) * 40;
+          p2.y = 540 - p2.h;
+          p2.facing = -1;
+          p2.vx = 0;
+          p2.vy = 0;
+          p2.onGround = true;
+          const burstStep = Math.floor(phase * 3.5);
+          if (burstStep !== Math.floor(prevPhase * 3.5)) {
+            p2.recoilTimer = 0.095;
+            renderer.spawnParticlesFromEvents([
+              { type: 'shoot_shotgun', x: p2.x - 8, y: p2.y + 15, color: '#FFFFFF' },
+            ]);
+          }
+        } else if (phase < 6.0) {
+          const u = (phase - 5.0) / 1.0;
+          p2.x = 1070 - u * 310;
+          p2.y = 540 - p2.h;
+          p2.facing = -1;
+          p2.vx = -360;
+          p2.vy = 0;
+          p2.onGround = true;
+          if (u < 0.55) {
+            p2.dashTimer = 0.1;
+            p2.dashVx = -420;
+            p2.dashVy = 0;
+          }
+        } else {
+          const u = (phase - 6.0) / 2.0;
+          p2.x = 760 + u * 10;
+          p2.y = 540 - p2.h - Math.sin(u * Math.PI * 0.5) * 100;
+          p2.facing = 1;
+          p2.vx = 40;
+          p2.vy = -80;
+          p2.onGround = false;
+        }
+        updateScarfTrail(p2, t + 0.45, dt);
 
+        // Animate patrol drone lazily above the right deck
+        if (sim.enemies[0]) {
+          sim.enemies[0].x = 975 + Math.sin(t * 1.1) * 75;
+          sim.enemies[0].dir = Math.cos(t * 1.1) >= 0 ? 1 : -1;
+        }
+
+        renderer.updateAmbientPlayerEffects(sim, dt);
         renderer.updateParticles(dt);
         renderer.render(ctx, canvas.width, canvas.height, sim, {
           isTitleBackdrop: true,

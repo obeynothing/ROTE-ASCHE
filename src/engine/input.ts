@@ -1,3 +1,4 @@
+import { createStickFilterState, evaluateLeftStickDirections, type StickFilterState } from '../game/controls';
 import type { InputSnapshot, MenuInputSnapshot, WeaponId } from '../game/types';
 
 export interface GamepadDeviceInfo {
@@ -31,12 +32,11 @@ interface ButtonMemory {
   menuBack: boolean;
 }
 
-const DEADZONE = 0.25;
-
 export class InputHub {
   private keys = new Set<string>();
   private prevKeys = new Set<string>();
   private latchedKeys = new Set<string>();
+  private stickFilters = new Map<number, StickFilterState>();
   private padMemory: ButtonMemory = {
     jump: false,
     dash: false,
@@ -194,11 +194,27 @@ export class InputHub {
     const axX = pad.axes[0] ?? 0;
     const axY = pad.axes[1] ?? 0;
     const btn = (i: number): boolean => Boolean(pad.buttons[i]?.pressed);
+    const anyBtn = pad.buttons.some((b) => b?.pressed);
 
-    const left = axX < -DEADZONE || btn(14);
-    const right = axX > DEADZONE || btn(15);
-    const up = axY < -DEADZONE || btn(12);
-    const down = axY > DEADZONE || btn(13);
+    let filter = this.stickFilters.get(pad.index);
+    if (!filter) {
+      filter = createStickFilterState();
+      this.stickFilters.set(pad.index, filter);
+    }
+    const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const stick = evaluateLeftStickDirections(
+      filter,
+      axX,
+      axY,
+      nowMs,
+      anyBtn,
+      pad.mapping === 'standard',
+    );
+
+    const left = stick.left || btn(14);
+    const right = stick.right || btn(15);
+    const up = stick.up || btn(12);
+    const down = stick.down || btn(13);
 
     const jumpHeld = btn(0); // A
     const dashHeld = btn(1) || btn(5) || btn(7); // B / RB / RT
@@ -257,14 +273,27 @@ export class InputHub {
     const rawPads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
     const connectedPads: GamepadDeviceInfo[] = [];
     let activePad: Gamepad | null = null;
+    let firstStandardPad: Gamepad | null = null;
+    let firstConnectedPad: Gamepad | null = null;
 
     for (let i = 0; i < rawPads.length; i++) {
       const gp = rawPads[i];
       if (gp && gp.connected) {
         connectedPads.push({ index: gp.index, id: gp.id, connected: true });
-        if (!activePad) activePad = gp;
+        if (!firstConnectedPad) firstConnectedPad = gp;
+        if (gp.mapping === 'standard') {
+          if (!firstStandardPad) firstStandardPad = gp;
+          const hasActivity =
+            gp.buttons.some((b) => b?.pressed) ||
+            Math.abs(gp.axes[0] ?? 0) > 0.42 ||
+            Math.abs(gp.axes[1] ?? 0) > 0.42;
+          if (!activePad && hasActivity) {
+            activePad = gp;
+          }
+        }
       }
     }
+    activePad = activePad ?? firstStandardPad ?? firstConnectedPad;
 
     const gp = this.readGamepad(activePad);
     const jumpCodes = ['Space', 'KeyW', 'ArrowUp'];

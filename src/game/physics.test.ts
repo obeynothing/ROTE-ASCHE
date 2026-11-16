@@ -18,6 +18,12 @@ import {
   recordStageSplit,
   saveLeaderboardRun,
 } from './leaderboard';
+import {
+  createScreenShakeState,
+  sampleScreenShakeOffset,
+  stepScreenShakeState,
+  triggerScreenShakeState,
+} from '../engine/screenShake';
 
 test('all 14 levels escalate in length (3100..8200px), showcase all 7 biomes, and mount Sector 14 bossArena', () => {
   assert.equal(LEVELS.length, 14, 'campaign should contain 14 escalating levels');
@@ -31,7 +37,7 @@ test('all 14 levels escalate in length (3100..8200px), showcase all 7 biomes, an
     prevWidth = level.width;
 
     assert.ok(level.checkpoints.length >= 2, `${level.id} must have >= 2 checkpoints`);
-    assert.ok(level.buddyPods.length >= 2, `${level.id} must have >= 2 buddy pods`);
+    assert.ok(level.buddyPods.length >= 1 && level.buddyPods.length <= 3, `${level.id} must have 1..3 well-spaced buddy pods`);
     assert.ok(level.goal.x + level.goal.w <= level.width, `${level.id} goal inside width`);
     assert.ok(level.goal.y >= 0 && level.goal.y + level.goal.h <= level.height, `${level.id} goal inside height`);
 
@@ -50,8 +56,35 @@ test('all 14 levels escalate in length (3100..8200px), showcase all 7 biomes, an
   }
 
   assert.equal(seenThemes.size, 7, 'levels should showcase all 7 Carrion-inspired biome themes');
-  assert.ok(LEVELS[13].bossArena, 'Sector 14 must mount the Omega-Kolos bossArena');
+  assert.ok(LEVELS[13].bossArena, 'Sector 14 must mount the Karnifex-09 bossArena');
   assert.equal(LEVELS[13].bossArena?.gateId, 's14-boss-gate');
+});
+
+test('buddy pods never cluster in pairs or crowd level endings, and level endings vary across stages 1..13', () => {
+  const goalHeights = new Set<number>();
+
+  for (const level of LEVELS) {
+    // Sorted pods must keep >= 950px horizontal spacing
+    const sortedPods = [...level.buddyPods].sort((a, b) => a.x - b.x);
+    for (let i = 1; i < sortedPods.length; i++) {
+      assert.ok(
+        sortedPods[i].x - sortedPods[i - 1].x >= 950,
+        `${level.id} buddy pods ${sortedPods[i - 1].id} (${sortedPods[i - 1].x}) and ${sortedPods[i].id} (${sortedPods[i].x}) must not cluster together`,
+      );
+    }
+
+    if (level.index < 13) {
+      goalHeights.add(level.goal.y);
+      for (const pod of level.buddyPods) {
+        assert.ok(
+          level.goal.x - pod.x >= 680,
+          `${level.id} buddy pod ${pod.id} (${pod.x}) must not sit right in front of goal (${level.goal.x})`,
+        );
+      }
+    }
+  }
+
+  assert.ok(goalHeights.size >= 3, `expected varied finale goal elevations across stages 1..13, got ${goalHeights.size}`);
 });
 
 test('ASCHE performs triple-jump and trails long 14-node scarf behind', () => {
@@ -286,11 +319,13 @@ test('mortar splash damages grouped enemies and stalker_crawler telegraphs + lun
   assert.ok(exploded || crawler.hp < preHp || !crawler.alive, 'mortar should explode or damage crawler');
 });
 
-test('Omega-Kolos Boss awakens in Sector 14 arena, shifts phases, and opens s14-boss-gate upon defeat', () => {
+test('Karnifex-09 Blut-Seraph awakens in Sector 14 arena, executes beam/multi-slam, shifts phases, and opens s14-boss-gate', () => {
   const level14 = LEVELS[13];
   const arena = level14.bossArena!;
   const sim = createWorldSimulation(level14, 0, 4, 'harpoon');
   assert.ok(sim.boss, 'Sector 14 creates BossState');
+  assert.equal(sim.boss!.name, 'KARNIFEX-09 · BLUT-SERAPH');
+  assert.equal(sim.boss!.maxHp, 105);
   assert.equal(sim.boss!.active, false, 'boss starts dormant until player enters arena');
 
   const gate = sim.gates.find((g) => g.id === arena.gateId)!;
@@ -303,12 +338,25 @@ test('Omega-Kolos Boss awakens in Sector 14 arena, shifts phases, and opens s14-
   p.onGround = true;
 
   stepWorldSimulation(sim, 1 / 60, EMPTY_INPUT);
-  assert.equal(sim.boss!.active, true, 'crossing triggerX awakens Omega-Kolos');
+  assert.equal(sim.boss!.active, true, 'crossing triggerX awakens Karnifex-09');
 
-  // Position player safely and hammer boss until phase 2, phase 3, and defeat
+  // Let Karnifex-09 cycle through moves before defeating it to verify beam & multi-slam states
+  let sawBeam = false;
+  let sawMultiSlam = false;
+  for (let step = 0; step < 360; step++) {
+    const active = getActivePlayer(sim);
+    active.invulnTimer = 2.0;
+    stepWorldSimulation(sim, 1 / 60, EMPTY_INPUT);
+    if (sim.boss!.state === 'beam' || sim.boss!.state === 'telegraph_beam') sawBeam = true;
+    if (sim.boss!.slamTargets.length >= 2) sawMultiSlam = true;
+  }
+  assert.equal(sawMultiSlam, true, 'Karnifex-09 prepares multi-target floor slams');
+  assert.equal(sawBeam, true, 'Karnifex-09 uses sweeping annihilation beam');
+
+  // Hammer boss until phase 2, phase 3, and defeat
   let sawPhase2 = false;
   let sawPhase3 = false;
-  for (let step = 0; step < 900 && !sim.boss!.defeated; step++) {
+  for (let step = 0; step < 960 && !sim.boss!.defeated; step++) {
     const active = getActivePlayer(sim);
     active.invulnTimer = 2.0; // keep test focused on boss damage & phase loop
     active.x = sim.boss!.x - 160;
@@ -324,15 +372,15 @@ test('Omega-Kolos Boss awakens in Sector 14 arena, shifts phases, and opens s14-
     if (sim.boss!.phase === 3) sawPhase3 = true;
   }
 
-  assert.equal(sawPhase2, true, 'Omega-Kolos transitions through Phase 2');
-  assert.equal(sawPhase3, true, 'Omega-Kolos transitions through Phase 3');
-  assert.equal(sim.boss!.defeated, true, 'Omega-Kolos can be defeated');
+  assert.equal(sawPhase2, true, 'Karnifex-09 transitions through Phase 2');
+  assert.equal(sawPhase3, true, 'Karnifex-09 transitions through Phase 3');
+  assert.equal(sim.boss!.defeated, true, 'Karnifex-09 can be defeated');
 
   // Step slightly more so gate slides open
   for (let i = 0; i < 30; i++) {
     stepWorldSimulation(sim, 1 / 60, EMPTY_INPUT);
   }
-  assert.ok(gate.openProgress > 0.9, 'defeating Omega-Kolos opens s14-boss-gate to the final Monolith');
+  assert.ok(gate.openProgress > 0.9, 'defeating Karnifex-09 opens s14-boss-gate to the final Monolith');
 });
 
 test('checkpoint updates active respawn coordinates', () => {
@@ -458,7 +506,7 @@ test('anti-cheat: ceiling clamp prevents y < 0 escape and 120Hz dash cannot tunn
   );
 });
 
-test('Sector 14 Goal Monolith stays locked while Omega-Kolos is alive and unlocks after defeat', () => {
+test('Sector 14 Goal Monolith stays locked while Karnifex-09 is alive and unlocks after defeat', () => {
   const level14 = LEVELS[13];
   const sim = createWorldSimulation(level14);
   const player = getActivePlayer(sim);
@@ -473,7 +521,27 @@ test('Sector 14 Goal Monolith stays locked while Omega-Kolos is alive and unlock
   // Defeat boss -> goal triggers immediately
   sim.boss!.defeated = true;
   stepWorldSimulation(sim, 1 / 60, EMPTY_INPUT);
-  assert.equal(sim.stageCompleted, true, 'goal monolith triggers once Omega-Kolos is defeated');
+  assert.equal(sim.stageCompleted, true, 'goal monolith triggers once Karnifex-09 is defeated');
+});
+
+test('subtle WorldRenderer screen-shake triggers bounded offsets for damage/boss hits and decays cleanly to zero', () => {
+  const shake = createScreenShakeState();
+  assert.deepEqual(sampleScreenShakeOffset(shake, 1.0), { x: 0, y: 0 });
+
+  // Boss hit subtle pulse
+  triggerScreenShakeState(shake, 2.1, 0.14);
+  const bossSample = sampleScreenShakeOffset(shake, 0.03);
+  assert.ok(Math.abs(bossSample.x) <= 3 && Math.abs(bossSample.y) <= 3, 'boss hit shake stays subtle');
+
+  // Stronger player damage overrides weaker remaining boss hit
+  triggerScreenShakeState(shake, 3.8, 0.24);
+  const hurtSample = sampleScreenShakeOffset(shake, 0.02);
+  assert.ok(Math.abs(hurtSample.x) <= 4 && Math.abs(hurtSample.y) <= 4, 'damage shake stays subtle');
+
+  // Step past full duration -> resets cleanly to zero
+  stepScreenShakeState(shake, 0.3);
+  assert.equal(shake.intensity, 0);
+  assert.deepEqual(sampleScreenShakeOffset(shake, 1.5), { x: 0, y: 0 });
 });
 
 test('speedrun PBs and leaderboard reject practice runs and track splits accurately', () => {
@@ -543,3 +611,36 @@ test('speedrun PBs and leaderboard reject practice runs and track splits accurat
     (globalThis as { window?: unknown }).window = prevWindow;
   }
 });
+
+test('shooting, jumping, and dashing after turning left keep player facing left and fire projectiles left', () => {
+  const sim = createWorldSimulation(LEVELS[0]);
+  const player = getActivePlayer(sim);
+  for (let i = 0; i < 30; i++) stepWorldSimulation(sim, 1 / 120, EMPTY_INPUT);
+  player.x = 460;
+
+  // Move left to turn left
+  for (let i = 0; i < 12; i++) {
+    stepWorldSimulation(sim, 1 / 120, { ...EMPTY_INPUT, left: true });
+  }
+  assert.equal(player.facing, -1);
+
+  // Stop moving, then fire multiple shots and dash -> must remain facing -1 and spawn left-moving shots
+  for (let i = 0; i < 36; i++) {
+    stepWorldSimulation(sim, 1 / 120, {
+      ...EMPTY_INPUT,
+      shootJustPressed: i === 0 || i === 30,
+      shootHeld: true,
+      jumpJustPressed: i === 10,
+      jumpHeld: i >= 10 && i < 20,
+      dashJustPressed: i === 25,
+    });
+    assert.equal(player.facing, -1, 'player facing must remain -1 when shooting without right input');
+  }
+
+  const fired = sim.projectiles.filter((p) => p.active);
+  assert.ok(fired.length >= 1);
+  for (const proj of fired) {
+    assert.ok(proj.vx < 0, `expected projectile vx (${proj.vx}) to travel left`);
+  }
+});
+

@@ -438,7 +438,7 @@ export function StatusModal({
           <>
             <div className="flex items-center justify-between gap-2 mb-1">
               <h2 className="text-3xl font-display font-bold uppercase tracking-wider text-[#EF4444]">
-                Omega-Kolos bezwungen
+                Karnifex-09 bezwungen
               </h2>
               {fullRunIsNewPb && !isPracticeRun && (
                 <span className="px-2 py-0.5 rounded-md bg-white text-black text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
@@ -449,7 +449,7 @@ export function StatusModal({
             <p className="text-sm text-zinc-400 mb-5">
               {isPracticeRun
                 ? 'Sektor-Sprung / Übungsmodus aktiv — offizieller Speedrun erfordert Start ab Sektor 01.'
-                : `Der Fleischkern ist vernichtet — Gesamtergebnis über ${totalStages} Sektoren.`}
+                : `Der Blut-Seraph ist vernichtet — Gesamtergebnis über ${totalStages} Sektoren.`}
             </p>
 
             <div className="grid grid-cols-3 gap-2.5 mb-5">

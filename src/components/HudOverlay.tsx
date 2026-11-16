@@ -312,7 +312,7 @@ export function HudOverlay({
           </div>
         </div>
 
-        {/* Omega-Kolos Boss Health Bar pinned neatly at top center */}
+        {/* Karnifex-09 Boss Health Bar pinned neatly at top center */}
         {hud.bossActive && !hud.bossDefeated && (
           <div className="mx-auto w-full max-w-xl px-4 py-2.5 rounded-xl bg-[#050506]/95 border border-[#7F1D1D] crimson-edge-glow pointer-events-none">
             <div className="flex items-center justify-between gap-3 mb-1.5">

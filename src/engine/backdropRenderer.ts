@@ -106,7 +106,9 @@ export class BackdropRenderer {
     octx.fillRect(0, 0, w, h);
 
     const horizonStart =
-      theme === 'flesh_foundry' || theme === 'omega_sanctum' || theme === 'bioreactor_abyss' ? 68 : 96;
+      theme === 'flesh_foundry' || theme === 'omega_sanctum' || theme === 'bioreactor_abyss'
+        ? Math.round(h * 0.19)
+        : Math.round(h * 0.26);
 
     const deepColor =
       theme === 'omega_sanctum' || theme === 'bioreactor_abyss'
@@ -132,22 +134,21 @@ export class BackdropRenderer {
     }
 
     // Subtle distant stars / ash specks in upper void
-    octx.fillStyle = '#3F3F46';
-    for (let i = 0; i < 48; i++) {
-      const sx = (i * 97 + 31) % w;
-      const sy = (i * 43 + 11) % Math.max(20, horizonStart - 10);
-      if (i % 7 === 0) octx.fillStyle = '#7F1D1D';
+    for (let i = 0; i < 84; i++) {
+      const sx = (i * 113 + 31) % w;
+      const sy = (i * 59 + 11) % Math.max(24, horizonStart + 22);
+      if (i % 7 === 0) octx.fillStyle = '#991B1B';
       else if (i % 5 === 0) octx.fillStyle = '#71717A';
       else octx.fillStyle = '#27272A';
-      octx.fillRect(sx, sy, 1, 1);
+      octx.fillRect(sx, sy, i % 9 === 0 ? 2 : 1, i % 9 === 0 ? 2 : 1);
     }
 
     if (theme === 'containment_lab') {
       // Monumental Blood-Eclipse with orbital shatter-ring
       const sunX = Math.round(w * 0.77);
-      const sunY = Math.round(h * 0.28);
-      const outerR = 58;
-      const innerR = 47;
+      const sunY = Math.round(h * 0.26);
+      const outerR = Math.round(h * 0.155);
+      const innerR = Math.round(outerR * 0.8);
       for (let dy = -outerR; dy <= outerR; dy++) {
         for (let dx = -outerR; dx <= outerR; dx++) {
           const dist = Math.hypot(dx, dy);
@@ -155,18 +156,18 @@ export class BackdropRenderer {
             if (dist <= innerR) {
               octx.fillStyle = '#030304';
               octx.fillRect(sunX + dx, sunY + dy, 1, 1);
-            } else if (dist <= innerR + 2 && dx < 12) {
+            } else if (dist <= innerR + 3 && dx < 16) {
               octx.fillStyle = '#F4F4F5';
               octx.fillRect(sunX + dx, sunY + dy, 1, 1);
-            } else if (dist <= outerR - 4 || ((dx + dy) & 1) === 0) {
-              octx.fillStyle = dist <= innerR + 6 ? '#EF4444' : '#7F1D1D';
+            } else if (dist <= outerR - 5 || ((dx + dy) & 1) === 0) {
+              octx.fillStyle = dist <= innerR + 9 ? '#EF4444' : '#7F1D1D';
               octx.fillRect(sunX + dx, sunY + dy, 1, 1);
             }
           }
         }
       }
-      // Tilted orbital debris ring crossing eclipse
-      for (let i = -72; i <= 72; i++) {
+      const ringSpan = Math.round(outerR * 1.3);
+      for (let i = -ringSpan; i <= ringSpan; i++) {
         const rx = sunX + i;
         const ry = Math.round(sunY + i * 0.16);
         if (Math.hypot(rx - sunX, ry - sunY) > innerR || i > 0) {
@@ -195,85 +196,88 @@ export class BackdropRenderer {
     ctx.closePath();
     ctx.fill();
 
-    const farSpan = 260;
+    const farSpan = 340;
     const worldCellOffset = Math.floor(Math.round(camPxX * 0.16) / farSpan);
     const farOff = -(Math.round(camPxX * 0.16) % farSpan);
     for (let x = farOff - farSpan, colIdx = worldCellOffset - 1; x < w + farSpan; x += farSpan, colIdx++) {
-      if (isTitleBackdrop && x < 235) continue;
+      if (isTitleBackdrop && x < Math.round(w * 0.35)) continue;
 
       // Fluted steel containment pillar + cable conduit
       ctx.fillStyle = '#08080C';
-      ctx.fillRect(x + 12, 0, 36, h);
+      ctx.fillRect(x + 14, 0, 44, h);
       ctx.fillStyle = '#18181F';
-      ctx.fillRect(x + 12, 0, 2, h);
-      ctx.fillRect(x + 46, 0, 2, h);
-      for (let ry = 20; ry < h; ry += 32) {
+      ctx.fillRect(x + 14, 0, 3, h);
+      ctx.fillRect(x + 55, 0, 3, h);
+      for (let ry = 26; ry < h; ry += 42) {
         ctx.fillStyle = '#27272A';
-        ctx.fillRect(x + 10, ry, 40, 4);
+        ctx.fillRect(x + 11, ry, 50, 5);
         ctx.fillStyle = '#050506';
-        ctx.fillRect(x + 10, ry + 4, 40, 1);
+        ctx.fillRect(x + 11, ry + 5, 50, 2);
       }
 
       // Secondary conduit pipe
       ctx.fillStyle = '#101016';
-      ctx.fillRect(x + 186, 0, 16, h);
+      ctx.fillRect(x + 242, 0, 22, h);
       ctx.fillStyle = '#3F3F46';
-      ctx.fillRect(x + 186, 0, 1, h);
+      ctx.fillRect(x + 242, 0, 2, h);
 
       if (Math.abs(colIdx) % 2 === 0) {
-        // Pressurized Cryo-Specimen Cylinder (60x176)
-        const vatX = x + 78;
-        const vatY = 92;
-        const vatW = 58;
-        const vatH = 176;
+        // Pressurized Cryo-Specimen Cylinder scaled cleanly to 540p
+        const vatX = x + 98;
+        const vatY = Math.round(h * 0.25);
+        const vatW = 78;
+        const vatH = Math.round(h * 0.48);
         ctx.fillStyle = '#120306';
         ctx.fillRect(vatX, vatY, vatW, vatH);
         ctx.fillStyle = '#220509';
-        ctx.fillRect(vatX + 4, vatY + 6, vatW - 8, vatH - 12);
+        ctx.fillRect(vatX + 5, vatY + 8, vatW - 10, vatH - 16);
+        // Subtle specimen backlit radial glow
+        ctx.fillStyle = 'rgba(220, 38, 38, 0.12)';
+        ctx.fillRect(vatX + 10, vatY + 24, vatW - 20, vatH - 48);
         // Glass walls & specular vertical highlights
         ctx.fillStyle = '#F4F4F5';
-        ctx.fillRect(vatX, vatY, 1, vatH);
-        ctx.fillRect(vatX + vatW - 1, vatY, 1, vatH);
-        ctx.fillStyle = 'rgba(244, 244, 245, 0.16)';
-        ctx.fillRect(vatX + 5, vatY + 8, 3, vatH - 16);
-        ctx.fillRect(vatX + 10, vatY + 14, 1, vatH - 28);
+        ctx.fillRect(vatX, vatY, 2, vatH);
+        ctx.fillRect(vatX + vatW - 2, vatY, 2, vatH);
+        ctx.fillStyle = 'rgba(244, 244, 245, 0.18)';
+        ctx.fillRect(vatX + 7, vatY + 10, 4, vatH - 20);
+        ctx.fillRect(vatX + 14, vatY + 18, 2, vatH - 36);
         // Armored tank caps + bolted status LEDs
         ctx.fillStyle = '#27272A';
-        ctx.fillRect(vatX - 4, vatY - 10, vatW + 8, 10);
-        ctx.fillRect(vatX - 4, vatY + vatH, vatW + 8, 12);
+        ctx.fillRect(vatX - 6, vatY - 14, vatW + 12, 14);
+        ctx.fillRect(vatX - 6, vatY + vatH, vatW + 12, 16);
         ctx.fillStyle = '#52525B';
-        ctx.fillRect(vatX - 4, vatY - 10, vatW + 8, 2);
+        ctx.fillRect(vatX - 6, vatY - 14, vatW + 12, 3);
         ctx.fillStyle = '#DC2626';
-        ctx.fillRect(vatX + 6, vatY - 6, 8, 3);
-        ctx.fillRect(vatX + vatW - 14, vatY - 6, 8, 3);
+        ctx.fillRect(vatX + 8, vatY - 8, 10, 4);
+        ctx.fillRect(vatX + vatW - 18, vatY - 8, 10, 4);
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(vatX + 8, vatY - 5, 2, 1);
+        ctx.fillRect(vatX + 10, vatY - 7, 3, 2);
 
         // Suspended Biomechanical Specimen silhouette inside cylinder
-        const floatY = Math.round(Math.sin(t * 1.6 + x * 0.03) * 5);
-        const sx = vatX + 20;
-        const sy = vatY + 56 + floatY;
+        const floatY = Math.round(Math.sin(t * 1.6 + x * 0.03) * 6);
+        const sx = vatX + 26;
+        const sy = vatY + Math.round(vatH * 0.3) + floatY;
         ctx.fillStyle = '#450A0A';
-        ctx.fillRect(sx - 2, sy, 22, 42);
+        ctx.fillRect(sx - 2, sy, 30, 56);
         ctx.fillStyle = '#7F1D1D';
-        ctx.fillRect(sx + 1, sy + 4, 16, 32);
+        ctx.fillRect(sx + 2, sy + 5, 22, 42);
         ctx.fillStyle = '#DC2626';
-        ctx.fillRect(sx + 4, sy + 10, 10, 14);
+        ctx.fillRect(sx + 6, sy + 13, 14, 18);
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(sx + 6, sy + 13, 2, 2);
-        ctx.fillRect(sx + 10, sy + 13, 2, 2);
+        ctx.fillRect(sx + 8, sy + 18, 3, 3);
+        ctx.fillRect(sx + 15, sy + 18, 3, 3);
         // Umbilical tentacles inside tank
         ctx.fillStyle = '#991B1B';
-        ctx.fillRect(sx + 2, sy + 36, 2, 22);
-        ctx.fillRect(sx + 8, sy + 38, 3, 26);
-        ctx.fillRect(sx + 14, sy + 36, 2, 18);
+        ctx.fillRect(sx + 4, sy + 48, 3, 32);
+        ctx.fillRect(sx + 13, sy + 52, 4, 38);
+        ctx.fillRect(sx + 21, sy + 48, 3, 26);
 
         // Rising cryo bubbles
-        for (let b = 0; b < 4; b++) {
-          const by = vatY + vatH - 8 - (Math.round(t * (22 + b * 5) + x + b * 37) % (vatH - 18));
-          const bx = vatX + 10 + ((b * 13) % (vatW - 20));
+        for (let b = 0; b < 5; b++) {
+          const by = vatY + vatH - 12 - (Math.round(t * (26 + b * 6) + x + b * 43) % (vatH - 24));
+          const bx = vatX + 12 + ((b * 15) % (vatW - 24));
           ctx.fillStyle = b % 2 === 0 ? '#FFFFFF' : '#EF4444';
-          ctx.fillRect(bx, by, b === 0 ? 2 : 1, b === 0 ? 2 : 1);
+          ctx.fillRect(bx, by, b === 0 ? 3 : 2, b === 0 ? 3 : 2);
         }
       } else {
         // Alternate Architectural Bay: Industrial Telemetry Wall + Vent Turbine & Manifold Pipes

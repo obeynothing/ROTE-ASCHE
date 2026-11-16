@@ -1473,12 +1473,599 @@ const EXTRA_SECTORS: SectorBlueprint[] = [
     index: 13,
     id: 'stage-14',
     name: '14 · Omega-Brutkammer',
-    subtitle: 'Finale Konfrontation: Durchbrich das Omega-Sanktum und vernichte den Fleischkolos',
+    subtitle: 'Finale Konfrontation: Durchbrich das Omega-Sanktum und vernichte KARNIFEX-09 · Blut-Seraph',
     theme: 'omega_sanctum',
     targetWidth: 8200,
     parTimeSeconds: 165,
   },
 ];
+
+function buildVariedFinale(
+  prefix: string,
+  cursorX: number,
+  cursorY: number,
+  targetWidth: number,
+  difficulty: number,
+): {
+  platforms: PlatformDef[];
+  switches: SwitchDef[];
+  gates: GateDef[];
+  bouncePads: LevelDef['bouncePads'];
+  crystals: CrystalDef[];
+  enemies: EnemyDef[];
+  goal: LevelDef['goal'];
+} {
+  const platforms: PlatformDef[] = [];
+  const switches: SwitchDef[] = [];
+  const gates: GateDef[] = [];
+  const bouncePads: LevelDef['bouncePads'] = [];
+  const crystals: CrystalDef[] = [];
+  const enemies: EnemyDef[] = [];
+
+  const variant = (difficulty - 1) % 6;
+  const startX = cursorX + 100;
+  const availW = Math.max(540, targetWidth - startX);
+
+  if (variant === 0) {
+    // Finale 0: Hochsprung-Bastion (Lower Launch Pier -> Bounce Tower -> Elevated Shrine)
+    const lowY = Math.min(555, Math.max(440, cursorY + 45));
+    const lowW = Math.min(250, Math.round(availW * 0.36));
+    platforms.push({
+      id: `${prefix}-fin0-low`,
+      kind: 'solid',
+      x: startX,
+      y: lowY,
+      w: lowW,
+      h: 720 - lowY,
+      accent: 'bio',
+    });
+    bouncePads.push({
+      id: `${prefix}-fin0-bp`,
+      x: startX + lowW - 76,
+      y: lowY - 16,
+      w: 56,
+      h: 16,
+      power: 845,
+    });
+
+    const highX = startX + lowW + 75;
+    const highY = 265;
+    const highW = Math.max(260, targetWidth - highX);
+    platforms.push({
+      id: `${prefix}-fin0-high`,
+      kind: 'solid',
+      x: highX,
+      y: highY,
+      w: highW,
+      h: 36,
+      accent: 'bone',
+    });
+    platforms.push({
+      id: `${prefix}-fin0-pillar`,
+      kind: 'solid',
+      x: highX + Math.round(highW * 0.35),
+      y: highY + 36,
+      w: 64,
+      h: 720 - (highY + 36),
+      accent: 'none',
+    });
+    crystals.push({
+      id: `${prefix}-fin0-c`,
+      x: highX - 24,
+      y: highY - 52,
+      radius: 13,
+    });
+    enemies.push({
+      id: `${prefix}-fin0-guard`,
+      type: difficulty >= 3 ? 'hunter_wasp' : 'patrol_drone',
+      x: highX + 85,
+      y: highY - 96,
+      w: 30,
+      h: 26,
+      patrolMinX: highX + 16,
+      patrolMaxX: targetWidth - 190,
+      speed: 120 + difficulty * 6,
+    });
+
+    const goalX = targetWidth - 135;
+    return {
+      platforms,
+      switches,
+      gates,
+      bouncePads,
+      crystals,
+      enemies,
+      goal: { x: goalX, y: highY - 84, w: 66, h: 84 },
+    };
+  }
+
+  if (variant === 1) {
+    // Finale 1: Abriegelungs-Schleuse (Catwalk Timed Switch -> Full-Bulkhead Blast Gate -> Goal Vault)
+    const deckY = Math.max(360, Math.min(510, cursorY));
+    const deckW = Math.max(520, availW);
+    platforms.push({
+      id: `${prefix}-fin1-deck`,
+      kind: 'solid',
+      x: startX,
+      y: deckY,
+      w: deckW,
+      h: 720 - deckY,
+      accent: 'crimson',
+    });
+    const shelfX = startX + 55;
+    const shelfY = deckY - 122;
+    platforms.push({
+      id: `${prefix}-fin1-shelf`,
+      kind: 'oneway',
+      x: shelfX,
+      y: shelfY,
+      w: 175,
+      h: 18,
+      accent: 'bone',
+    });
+    const gateX = startX + Math.round(deckW * 0.62);
+    const gateId = `${prefix}-fin1-gate`;
+    switches.push({
+      id: `${prefix}-fin1-sw`,
+      x: shelfX + 66,
+      y: shelfY - 18,
+      w: 44,
+      h: 18,
+      targetGateId: gateId,
+      mode: 'timed',
+      duration: 8.5,
+    });
+    gates.push({
+      id: gateId,
+      x: gateX,
+      y: deckY - 120,
+      w: 36,
+      h: 120,
+      openOffsetY: -122,
+    });
+    platforms.push({
+      id: `${prefix}-fin1-bulkhead`,
+      kind: 'solid',
+      x: gateX,
+      y: 0,
+      w: 36,
+      h: deckY - 120,
+      accent: 'bone',
+    });
+    crystals.push({
+      id: `${prefix}-fin1-c`,
+      x: shelfX + 88,
+      y: shelfY - 62,
+      radius: 13,
+    });
+    enemies.push({
+      id: `${prefix}-fin1-guard`,
+      type: difficulty >= 4 ? 'shield_enforcer' : 'stalker_crawler',
+      x: startX + Math.round(deckW * 0.42),
+      y: deckY - (difficulty >= 4 ? 40 : 26),
+      w: 32,
+      h: difficulty >= 4 ? 40 : 26,
+      patrolMinX: startX + 60,
+      patrolMaxX: gateX - 55,
+      speed: difficulty >= 4 ? 90 : 145,
+    });
+
+    const goalX = Math.min(targetWidth - 120, gateX + 115);
+    return {
+      platforms,
+      switches,
+      gates,
+      bouncePads,
+      crystals,
+      enemies,
+      goal: { x: goalX, y: deckY - 84, w: 66, h: 84 },
+    };
+  }
+
+  if (variant === 2) {
+    // Finale 2: Schwebebahn-Abgrund (Moving Sled under Watchtower Turret -> Stepped Shrine)
+    const entryY = Math.max(340, Math.min(490, cursorY));
+    const entryW = 145;
+    platforms.push({
+      id: `${prefix}-fin2-entry`,
+      kind: 'solid',
+      x: startX,
+      y: entryY,
+      w: entryW,
+      h: 720 - entryY,
+      accent: 'bone',
+    });
+    const movX = startX + entryW + 35;
+    const movRange = Math.max(120, Math.min(180, availW - 430));
+    platforms.push({
+      id: `${prefix}-fin2-mov`,
+      kind: 'moving',
+      x: movX,
+      y: entryY - 18,
+      w: 128,
+      h: 22,
+      accent: 'crimson',
+      moveAxis: 'x',
+      moveRange: movRange,
+      moveSpeed: Math.min(2.4, 1.45 + difficulty * 0.08),
+      movePhase: 0.4,
+    });
+    crystals.push({
+      id: `${prefix}-fin2-c`,
+      x: movX + Math.round(movRange * 0.55) + 50,
+      y: entryY - 85,
+      radius: 13,
+    });
+    enemies.push({
+      id: `${prefix}-fin2-turret`,
+      type: 'pulse_turret',
+      x: movX + Math.round(movRange * 0.5) + 42,
+      y: Math.max(45, entryY - 245),
+      w: 34,
+      h: 34,
+      speed: 0,
+      fireInterval: Math.max(2.0, 2.9 - difficulty * 0.06),
+      laserLength: 215,
+    });
+
+    const shrineX = movX + movRange + 150;
+    const shrineY = Math.max(280, entryY - 45);
+    const shrineW = Math.max(220, targetWidth - shrineX);
+    platforms.push({
+      id: `${prefix}-fin2-shrine`,
+      kind: 'solid',
+      x: shrineX,
+      y: shrineY,
+      w: shrineW,
+      h: 720 - shrineY,
+      accent: 'bio',
+    });
+
+    const goalX = Math.min(targetWidth - 125, shrineX + shrineW - 135);
+    return {
+      platforms,
+      switches,
+      gates,
+      bouncePads,
+      crystals,
+      enemies,
+      goal: { x: goalX, y: shrineY - 84, w: 66, h: 84 },
+    };
+  }
+
+  if (variant === 3) {
+    // Finale 3: Tiefbunker-Schacht (Drop into Lower Pit -> Latch Gate -> Bounce up to Balcony Goal)
+    const pitY = 550;
+    const pitW = Math.round(availW * 0.58);
+    platforms.push({
+      id: `${prefix}-fin3-pit`,
+      kind: 'solid',
+      x: startX,
+      y: pitY,
+      w: pitW,
+      h: 720 - pitY,
+      accent: 'crimson',
+    });
+    const gateX = startX + pitW - 88;
+    const gateId = `${prefix}-fin3-gate`;
+    switches.push({
+      id: `${prefix}-fin3-sw`,
+      x: startX + 75,
+      y: pitY - 18,
+      w: 44,
+      h: 18,
+      targetGateId: gateId,
+      mode: 'latch',
+    });
+    gates.push({
+      id: gateId,
+      x: gateX,
+      y: pitY - 120,
+      w: 34,
+      h: 120,
+      openOffsetY: -124,
+    });
+    platforms.push({
+      id: `${prefix}-fin3-bulkhead`,
+      kind: 'solid',
+      x: gateX,
+      y: 0,
+      w: 34,
+      h: pitY - 120,
+      accent: 'bone',
+    });
+    enemies.push({
+      id: `${prefix}-fin3-crawler`,
+      type: 'stalker_crawler',
+      x: startX + Math.round(pitW * 0.45),
+      y: pitY - 26,
+      w: 34,
+      h: 26,
+      patrolMinX: startX + 135,
+      patrolMaxX: gateX - 48,
+      speed: Math.min(185, 115 + difficulty * 5),
+    });
+
+    const balcX = startX + pitW;
+    const balcY = 340;
+    const balcW = Math.max(210, targetWidth - balcX);
+    platforms.push({
+      id: `${prefix}-fin3-balc`,
+      kind: 'solid',
+      x: balcX,
+      y: balcY,
+      w: balcW,
+      h: 720 - balcY,
+      accent: 'bone',
+    });
+    bouncePads.push({
+      id: `${prefix}-fin3-bp`,
+      x: gateX + 40,
+      y: pitY - 16,
+      w: 48,
+      h: 16,
+      power: 830,
+    });
+    crystals.push({
+      id: `${prefix}-fin3-c`,
+      x: balcX - 16,
+      y: balcY - 58,
+      radius: 13,
+    });
+
+    const goalX = Math.min(targetWidth - 120, balcX + balcW - 130);
+    return {
+      platforms,
+      switches,
+      gates,
+      bouncePads,
+      crystals,
+      enemies,
+      goal: { x: goalX, y: balcY - 84, w: 66, h: 84 },
+    };
+  }
+
+  if (variant === 4) {
+    // Finale 4: Kreissägen-Korridor (Dual-Tier Saw Bridge & Mortar Overlook -> Raised Plinth)
+    const bridgeY = Math.max(380, Math.min(500, cursorY + 10));
+    const bridgeW = Math.max(360, availW - 210);
+    platforms.push({
+      id: `${prefix}-fin4-bridge`,
+      kind: 'solid',
+      x: startX,
+      y: bridgeY,
+      w: bridgeW,
+      h: 720 - bridgeY,
+      accent: 'none',
+    });
+    platforms.push({
+      id: `${prefix}-fin4-cat`,
+      kind: 'oneway',
+      x: startX + 65,
+      y: bridgeY - 115,
+      w: Math.max(150, bridgeW - 130),
+      h: 18,
+      accent: 'crimson',
+    });
+    enemies.push({
+      id: `${prefix}-fin4-saw`,
+      type: 'saw_slider',
+      x: startX + Math.round(bridgeW * 0.4),
+      y: bridgeY - 28,
+      w: 34,
+      h: 34,
+      patrolMinX: startX + 45,
+      patrolMaxX: startX + bridgeW - 55,
+      speed: Math.min(245, 145 + difficulty * 8),
+    });
+    if (difficulty >= 5) {
+      enemies.push({
+        id: `${prefix}-fin4-spit`,
+        type: 'mortar_spitter',
+        x: startX + Math.round(bridgeW * 0.52),
+        y: bridgeY - 115 - 32,
+        w: 34,
+        h: 32,
+        speed: 0,
+        fireInterval: 2.2,
+      });
+    }
+    crystals.push({
+      id: `${prefix}-fin4-c`,
+      x: startX + Math.round(bridgeW * 0.5),
+      y: bridgeY - 168,
+      radius: 13,
+    });
+
+    const altarX = startX + bridgeW + 45;
+    const altarY = bridgeY - 62;
+    const altarW = Math.max(175, targetWidth - altarX);
+    platforms.push({
+      id: `${prefix}-fin4-altar`,
+      kind: 'solid',
+      x: altarX,
+      y: altarY,
+      w: altarW,
+      h: 720 - altarY,
+      accent: 'bone',
+    });
+    const goalX = Math.min(targetWidth - 115, altarX + altarW - 125);
+    return {
+      platforms,
+      switches,
+      gates,
+      bouncePads,
+      crystals,
+      enemies,
+      goal: { x: goalX, y: altarY - 84, w: 66, h: 84 },
+    };
+  }
+
+  // Finale 5: Zitadellen-Tor (Upper Sniper Balcony Switch -> Citadel Gate -> Inner Shrine)
+  const baseY = Math.max(370, Math.min(490, cursorY));
+  const baseW = Math.max(520, availW);
+  platforms.push({
+    id: `${prefix}-fin5-base`,
+    kind: 'solid',
+    x: startX,
+    y: baseY,
+    w: baseW,
+    h: 720 - baseY,
+    accent: 'bio',
+  });
+  const stepX = startX + 75;
+  const stepY = baseY - 108;
+  platforms.push({
+    id: `${prefix}-fin5-balcony`,
+    kind: 'oneway',
+    x: stepX,
+    y: stepY,
+    w: 195,
+    h: 18,
+    accent: 'bone',
+  });
+  const gateX = startX + Math.round(baseW * 0.6);
+  const gateId = `${prefix}-fin5-gate`;
+  switches.push({
+    id: `${prefix}-fin5-sw`,
+    x: stepX + 36,
+    y: stepY - 18,
+    w: 44,
+    h: 18,
+    targetGateId: gateId,
+    mode: 'latch',
+  });
+  gates.push({
+    id: gateId,
+    x: gateX,
+    y: baseY - 125,
+    w: 36,
+    h: 125,
+    openOffsetY: -128,
+  });
+  platforms.push({
+    id: `${prefix}-fin5-bulkhead`,
+    kind: 'solid',
+    x: gateX,
+    y: 0,
+    w: 36,
+    h: baseY - 125,
+    accent: 'bone',
+  });
+  enemies.push({
+    id: `${prefix}-fin5-enforcer`,
+    type: 'shield_enforcer',
+    x: startX + Math.round(baseW * 0.4),
+    y: baseY - 40,
+    w: 32,
+    h: 40,
+    patrolMinX: startX + 60,
+    patrolMaxX: gateX - 55,
+    speed: 95,
+  });
+  crystals.push({
+    id: `${prefix}-fin5-c`,
+    x: stepX + 145,
+    y: stepY - 56,
+    radius: 13,
+  });
+  const shrineStepX = gateX + 68;
+  const shrineStepY = baseY - 26;
+  platforms.push({
+    id: `${prefix}-fin5-plinth`,
+    kind: 'solid',
+    x: shrineStepX,
+    y: shrineStepY,
+    w: Math.max(150, targetWidth - shrineStepX),
+    h: 26,
+    accent: 'crimson',
+  });
+  const goalX = Math.min(targetWidth - 115, shrineStepX + 42);
+  return {
+    platforms,
+    switches,
+    gates,
+    bouncePads,
+    crystals,
+    enemies,
+    goal: { x: goalX, y: shrineStepY - 84, w: 66, h: 84 },
+  };
+}
+
+function normalizeBuddyPods(
+  candidates: BuddyPodDef[],
+  level: {
+    id: string;
+    width: number;
+    goalX: number;
+    platforms: PlatformDef[];
+    switches: SwitchDef[];
+    gates: GateDef[];
+    isBossStage: boolean;
+  },
+): BuddyPodDef[] {
+  const MIN_SPACING = 1050;
+  const MAX_PODS = level.width >= 6600 ? 3 : 2;
+  const maxGoalAllowedX = level.isBossStage ? level.goalX - 380 : level.goalX - 720;
+
+  // Keep only candidates far enough from exit and safely grounded on solid floors away from gates/switches
+  const validCandidates = candidates
+    .filter((p) => p.x >= 260 && p.x <= maxGoalAllowedX)
+    .sort((a, b) => a.x - b.x);
+
+  const chosen: BuddyPodDef[] = [];
+
+  // For Stage 14 Boss Stage, prioritize the pre-boss recovery pod first, then space backwards
+  if (level.isBossStage) {
+    const preBossPod = validCandidates.find((p) => p.id === 's14-pod-boss');
+    if (preBossPod) chosen.push(preBossPod);
+  }
+
+  for (const cand of validCandidates) {
+    if (chosen.length >= MAX_PODS) break;
+    if (chosen.some((existing) => Math.abs(existing.x - cand.x) < MIN_SPACING)) continue;
+    chosen.push(cand);
+  }
+
+  // If fewer than 2 pods remain after anti-cluster filtering, pick solid deck spots along level thirds
+  if (chosen.length < 2) {
+    const solidDecks = level.platforms
+      .filter((pl) => pl.kind === 'solid' && pl.w >= 180 && pl.y >= 240 && pl.y <= 620)
+      .sort((a, b) => a.x - b.x);
+
+    const targets = [level.width * 0.28, level.width * 0.56];
+    for (let ti = 0; ti < targets.length && chosen.length < 2; ti++) {
+      const targetX = Math.min(maxGoalAllowedX, targets[ti]);
+      let bestSpot: { x: number; y: number } | null = null;
+      let bestDist = Infinity;
+
+      for (const deck of solidDecks) {
+        const px = Math.round(Math.max(deck.x + 56, Math.min(deck.x + deck.w - 56, targetX)));
+        if (px < 240 || px > maxGoalAllowedX) continue;
+        if (chosen.some((c) => Math.abs(c.x - px) < 900)) continue;
+        const hitsGateOrSwitch =
+          level.gates.some((g) => Math.abs(g.x + g.w / 2 - px) < 60) ||
+          level.switches.some((s) => Math.abs(s.x + s.w / 2 - px) < 52);
+        if (hitsGateOrSwitch) continue;
+        const d = Math.abs(px - targetX);
+        if (d < bestDist) {
+          bestDist = d;
+          bestSpot = { x: px, y: deck.y };
+        }
+      }
+
+      if (bestSpot) {
+        chosen.push({
+          id: `${level.id}-pod-balanced-${ti}`,
+          x: bestSpot.x,
+          y: bestSpot.y,
+        });
+      }
+    }
+  }
+
+  return chosen.sort((a, b) => a.x - b.x);
+}
 
 function appendGauntletSegments(
   prefix: string,
@@ -1486,7 +2073,8 @@ function appendGauntletSegments(
   startY: number,
   targetWidth: number,
   difficulty: number,
-  reserveEndWidth = 640,
+  reserveEndWidth = 820,
+  skipGenericFinale = false,
 ): {
   platforms: PlatformDef[];
   switches: SwitchDef[];
@@ -1513,7 +2101,7 @@ function appendGauntletSegments(
   let cursorY = Math.max(300, Math.min(540, startY));
   let seg = 1;
 
-  // Initial bridge deck with Checkpoint + Gefährten-Kapsel
+  // Initial bridge deck with Checkpoint + optional early-mid Gefährten-Kapsel
   const entryW = 340;
   platforms.push({
     id: `${prefix}-gx-entry`,
@@ -1525,7 +2113,7 @@ function appendGauntletSegments(
     accent: 'bio',
   });
   checkpoints.push({ id: `${prefix}-gcp-0`, x: cursorX + 90, y: cursorY });
-  buddyPods.push({ id: `${prefix}-gpod-0`, x: cursorX + 210, y: cursorY });
+  buddyPods.push({ id: `${prefix}-gpod-0`, x: cursorX + 215, y: cursorY });
   cursorX += entryW;
 
   // Modular escalating gauntlet blocks until we reach final goal/boss deck
@@ -1571,7 +2159,6 @@ function appendGauntletSegments(
         accent: seg % 2 === 0 ? 'crimson' : 'bio',
       });
 
-      // Varied enemy mix based on difficulty
       if (difficulty >= 4 && seg % 2 === 0) {
         enemies.push({
           id: `${prefix}-gshield-${seg}`,
@@ -1763,6 +2350,9 @@ function appendGauntletSegments(
       if (seg === 2 || seg === 4) {
         checkpoints.push({ id: `${prefix}-gcp-${seg}`, x: highBridgeX + 55, y: cursorY });
       }
+      if (seg === 4) {
+        buddyPods.push({ id: `${prefix}-gpod-${seg}`, x: highBridgeX + 115, y: cursorY });
+      }
       cursorX = highBridgeX + bridgeW;
     } else {
       const s1X = cursorX + 125;
@@ -1825,26 +2415,18 @@ function appendGauntletSegments(
     seg += 1;
   }
 
-  // Final Goal Deck (ignored if caller overrides with Boss Arena)
-  const finalX = cursorX + 115;
-  const finalY = Math.max(290, Math.min(480, cursorY - 20));
-  const finalW = Math.max(320, targetWidth - finalX);
-  platforms.push({
-    id: `${prefix}-gfinal-deck`,
-    kind: 'solid',
-    x: finalX,
-    y: finalY,
-    w: finalW,
-    h: 720 - finalY,
-    accent: 'bone',
-  });
-  buddyPods.push({
-    id: `${prefix}-gpod-final`,
-    x: finalX + 80,
-    y: finalY,
-  });
+  let goal: LevelDef['goal'] = { x: targetWidth - 135, y: 396, w: 66, h: 84 };
+  if (!skipGenericFinale) {
+    const finale = buildVariedFinale(prefix, cursorX, cursorY, targetWidth, difficulty);
+    platforms.push(...finale.platforms);
+    switches.push(...finale.switches);
+    gates.push(...finale.gates);
+    bouncePads.push(...finale.bouncePads);
+    crystals.push(...finale.crystals);
+    enemies.push(...finale.enemies);
+    goal = finale.goal;
+  }
 
-  const goalX = Math.min(targetWidth - 135, finalX + finalW - 145);
   return {
     platforms,
     switches,
@@ -1854,7 +2436,7 @@ function appendGauntletSegments(
     enemies,
     checkpoints,
     buddyPods,
-    goal: { x: goalX, y: finalY - 84, w: 66, h: 84 },
+    goal,
     endCursorX: cursorX,
     endCursorY: cursorY,
   };
@@ -1868,7 +2450,7 @@ function buildFourteenLevels(): LevelDef[] {
     const base = BASE_LEVELS[i];
     const targetW = TARGET_WIDTHS[i];
     const goalBottom = base.goal.y + base.goal.h;
-    const ext = appendGauntletSegments(`s${i + 1}`, base.width, goalBottom, targetW, i + 1);
+    const ext = appendGauntletSegments(`s${i + 1}`, base.width, goalBottom, targetW, i + 1, 820, false);
 
     const midPods: BuddyPodDef[] = base.checkpoints.map((cp, cpIdx) => ({
       id: `${base.id}-pod-${cpIdx}`,
@@ -1876,26 +2458,39 @@ function buildFourteenLevels(): LevelDef[] {
       y: cp.y,
     }));
 
+    const allPlatforms = [...base.platforms, ...ext.platforms];
+    const allSwitches = [
+      ...base.switches.map((s) => ({ ...s, mode: s.mode === 'hold' ? ('latch' as const) : s.mode })),
+      ...ext.switches,
+    ];
+    const allGates = [...base.gates, ...ext.gates];
+    const normalizedPods = normalizeBuddyPods([...midPods, ...ext.buddyPods], {
+      id: base.id,
+      width: targetW,
+      goalX: ext.goal.x,
+      platforms: allPlatforms,
+      switches: allSwitches,
+      gates: allGates,
+      isBossStage: false,
+    });
+
     result.push({
       ...base,
       width: targetW,
       parTimeSeconds: Math.round(base.parTimeSeconds * 1.45),
       goal: ext.goal,
       checkpoints: [...base.checkpoints, ...ext.checkpoints],
-      buddyPods: [...midPods, ...ext.buddyPods],
-      platforms: [...base.platforms, ...ext.platforms],
-      switches: [
-        ...base.switches.map((s) => ({ ...s, mode: s.mode === 'hold' ? ('latch' as const) : s.mode })),
-        ...ext.switches,
-      ],
-      gates: [...base.gates, ...ext.gates],
+      buddyPods: normalizedPods,
+      platforms: allPlatforms,
+      switches: allSwitches,
+      gates: allGates,
       bouncePads: [...base.bouncePads, ...ext.bouncePads],
       crystals: [...base.crystals, ...ext.crystals],
       enemies: [...base.enemies, ...ext.enemies],
     });
   }
 
-  // Generate Sectors 11..14 (with Sector 14 housing the Omega-Kolos Boss Arena)
+  // Generate Sectors 11..14 (with Sector 14 housing the Karnifex-09 Boss Arena)
   for (const bp of EXTRA_SECTORS) {
     const prefix = `s${bp.index + 1}`;
     const isBossStage = bp.index === 13;
@@ -1933,10 +2528,25 @@ function buildFourteenLevels(): LevelDef[] {
       495,
       bp.targetWidth,
       bp.index + 1,
-      isBossStage ? 1420 : 640,
+      isBossStage ? 1420 : 820,
+      isBossStage,
     );
 
     if (!isBossStage) {
+      const allPlatforms = [startFloor, warmupLedge, warmupDeck, ...ext.platforms];
+      const normalizedPods = normalizeBuddyPods(
+        [{ id: `${prefix}-pod0`, x: 1120, y: 495 }, ...ext.buddyPods],
+        {
+          id: bp.id,
+          width: bp.targetWidth,
+          goalX: ext.goal.x,
+          platforms: allPlatforms,
+          switches: ext.switches,
+          gates: ext.gates,
+          isBossStage: false,
+        },
+      );
+
       result.push({
         index: bp.index,
         id: bp.id,
@@ -1947,10 +2557,10 @@ function buildFourteenLevels(): LevelDef[] {
         height: 720,
         spawn: { x: 108, y: 520 },
         checkpoints: [{ id: `${prefix}-cp0`, x: 960, y: 495 }, ...ext.checkpoints],
-        buddyPods: [{ id: `${prefix}-pod0`, x: 1120, y: 495 }, ...ext.buddyPods],
+        buddyPods: normalizedPods,
         goal: ext.goal,
         parTimeSeconds: bp.parTimeSeconds,
-        platforms: [startFloor, warmupLedge, warmupDeck, ...ext.platforms],
+        platforms: allPlatforms,
         switches: ext.switches,
         gates: ext.gates,
         bouncePads: ext.bouncePads,
@@ -1971,10 +2581,7 @@ function buildFourteenLevels(): LevelDef[] {
         ],
       });
     } else {
-      // Stage 14: strip generic final deck and mount the Omega-Kolos Boss Chamber!
-      const gauntletPlatforms = ext.platforms.filter((p) => p.id !== `${prefix}-gfinal-deck`);
-      const gauntletPods = ext.buddyPods.filter((p) => p.id !== `${prefix}-gpod-final`);
-
+      // Stage 14: mount the Karnifex-09 Blut-Seraph Boss Chamber!
       const preBossX = ext.endCursorX + 95;
       const preBossY = 510;
       const arenaX = preBossX + 290;
@@ -2038,6 +2645,29 @@ function buildFourteenLevels(): LevelDef[] {
         },
       ];
 
+      const allPlatforms = [startFloor, warmupLedge, warmupDeck, ...ext.platforms, ...bossPlatforms];
+      const allGates = [
+        ...ext.gates,
+        { id: 's14-boss-gate', x: gateX, y: 400, w: 32, h: 140, openOffsetY: -145 },
+      ];
+      const goalX = gateX + 100;
+      const normalizedPods = normalizeBuddyPods(
+        [
+          { id: `${prefix}-pod0`, x: 1120, y: 495 },
+          ...ext.buddyPods,
+          { id: 's14-pod-boss', x: preBossX + 155, y: preBossY },
+        ],
+        {
+          id: bp.id,
+          width: arenaX + arenaW,
+          goalX: arenaX,
+          platforms: allPlatforms,
+          switches: ext.switches,
+          gates: allGates,
+          isBossStage: true,
+        },
+      );
+
       result.push({
         index: bp.index,
         id: bp.id,
@@ -2052,19 +2682,12 @@ function buildFourteenLevels(): LevelDef[] {
           ...ext.checkpoints,
           { id: 's14-cp-boss', x: preBossX + 75, y: preBossY },
         ],
-        buddyPods: [
-          { id: `${prefix}-pod0`, x: 1120, y: 495 },
-          ...gauntletPods,
-          { id: 's14-pod-boss', x: preBossX + 155, y: preBossY },
-        ],
-        goal: { x: gateX + 100, y: arenaFloorY - 86, w: 68, h: 86 },
+        buddyPods: normalizedPods,
+        goal: { x: goalX, y: arenaFloorY - 86, w: 68, h: 86 },
         parTimeSeconds: bp.parTimeSeconds,
-        platforms: [startFloor, warmupLedge, warmupDeck, ...gauntletPlatforms, ...bossPlatforms],
+        platforms: allPlatforms,
         switches: ext.switches,
-        gates: [
-          ...ext.gates,
-          { id: 's14-boss-gate', x: gateX, y: 400, w: 32, h: 140, openOffsetY: -145 },
-        ],
+        gates: allGates,
         bouncePads: [
           ...ext.bouncePads,
           { id: 's14-boss-bp-l', x: arenaX + 26, y: arenaFloorY - 16, w: 52, h: 16, power: 820 },
@@ -2095,7 +2718,7 @@ function buildFourteenLevels(): LevelDef[] {
           floorY: arenaFloorY,
           gateId: 's14-boss-gate',
           spawnX: arenaX + 530,
-          spawnY: 265,
+          spawnY: 250,
         },
       });
     }

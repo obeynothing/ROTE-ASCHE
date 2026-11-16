@@ -95,3 +95,90 @@ export function getControlLabels(gamepads: GamepadDeviceInfo[]): ControlLabels {
     summon: 'E',
   };
 }
+
+export const STICK_MOVE_DEADZONE = 0.42;
+export const STICK_VERTICAL_AIM_DEADZONE = 0.50;
+export const STICK_SNAPBACK_PEAK = 0.60;
+export const STICK_SNAPBACK_WINDOW_MS = 175;
+export const STICK_SNAPBACK_OVERRIDE = 0.86;
+export const STICK_NEUTRAL_ZONE = 0.24;
+
+export interface StickFilterState {
+  strongDirX: -1 | 0 | 1;
+  strongAtMsX: number;
+  calibratedNeutralX: boolean;
+  initialAxisX: number | null;
+}
+
+export function createStickFilterState(): StickFilterState {
+  return {
+    strongDirX: 0,
+    strongAtMsX: -10000,
+    calibratedNeutralX: false,
+    initialAxisX: null,
+  };
+}
+
+export function evaluateLeftStickDirections(
+  state: StickFilterState,
+  rawX: number,
+  rawY: number,
+  nowMs: number,
+  _anyButtonPressed: boolean,
+  isStandardMapping = true,
+): { left: boolean; right: boolean; up: boolean; down: boolean } {
+  const axX = Number.isFinite(rawX) ? rawX : 0;
+  const axY = Number.isFinite(rawY) ? rawY : 0;
+
+  if (state.initialAxisX === null) {
+    state.initialAxisX = axX;
+  }
+  if (!state.calibratedNeutralX) {
+    const nearCenter = Math.abs(axX) <= STICK_NEUTRAL_ZONE;
+    const movedSignificantly = Math.abs(axX - state.initialAxisX) >= 0.35;
+    if (nearCenter || (isStandardMapping && movedSignificantly)) {
+      state.calibratedNeutralX = true;
+    }
+  }
+
+  // Reject uncalibrated phantom/drifting axis until genuinely centered or moved
+  if (!state.calibratedNeutralX) {
+    return {
+      left: false,
+      right: false,
+      up: axY < -STICK_MOVE_DEADZONE,
+      down: axY > STICK_MOVE_DEADZONE,
+    };
+  }
+
+  // Record strong intentional push to arm snapback protection on release
+  if (axX <= -STICK_SNAPBACK_PEAK) {
+    state.strongDirX = -1;
+    state.strongAtMsX = nowMs;
+  } else if (axX >= STICK_SNAPBACK_PEAK) {
+    state.strongDirX = 1;
+    state.strongAtMsX = nowMs;
+  } else if (state.strongDirX !== 0 && nowMs - state.strongAtMsX > STICK_SNAPBACK_WINDOW_MS) {
+    state.strongDirX = 0;
+  }
+
+  // Higher horizontal threshold when pushing strongly Up/Down so aiming upward won't flip facing
+  const xThresh = Math.abs(axY) > 0.65 ? STICK_VERTICAL_AIM_DEADZONE : STICK_MOVE_DEADZONE;
+  const inSnapbackWindow = state.strongDirX !== 0 && nowMs - state.strongAtMsX <= STICK_SNAPBACK_WINDOW_MS;
+
+  let left = axX < -xThresh;
+  let right = axX > xThresh;
+
+  // Suppress spring snapback overshoot in the opposite direction after releasing a strong stick push
+  if (inSnapbackWindow && state.strongDirX === -1 && right && axX < STICK_SNAPBACK_OVERRIDE) {
+    right = false;
+  } else if (inSnapbackWindow && state.strongDirX === 1 && left && axX > -STICK_SNAPBACK_OVERRIDE) {
+    left = false;
+  }
+
+  const up = axY < -STICK_MOVE_DEADZONE;
+  const down = axY > STICK_MOVE_DEADZONE;
+
+  return { left, right, up, down };
+}
+
